@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: '/xavitanya/',
   plugins: [
     react(),
     tailwindcss(),
@@ -15,19 +16,19 @@ export default defineConfig({
         short_name: 'ObrasLink',
         description: 'Fichajes, partes diarios, almacén y obras para tu empresa de reformas',
         lang: 'es',
-        start_url: '/',
+        start_url: '/xavitanya/',
         display: 'standalone',
         background_color: '#F3F4F2',
         theme_color: '#1F2421',
         icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: '/xavitanya/pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/xavitanya/pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/xavitanya/pwa-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
-        navigateFallback: '/index.html'
+        navigateFallback: '/xavitanya/index.html'
       }
     })
   ]
