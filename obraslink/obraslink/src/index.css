@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Paleta "pie de obra" */
+  --color-hormigon: #f3f4f2;      /* fondo */
+  --color-grafito: #1f2421;       /* tinta principal */
+  --color-humo: #5c635e;          /* tinta secundaria */
+  --color-linea: #e2e4e0;         /* bordes */
+  --color-ambar: #f5b301;         /* acento señalización */
+  --color-ambar-oscuro: #b98600;
+  --color-casco: #1f7a5c;         /* verde OK / trabajando */
+  --color-casco-claro: #e2f2ec;
+  --color-senal: #d64533;         /* rojo salida / alerta */
+  --color-senal-claro: #fbe9e6;
+  --color-papel: #ffffff;
+
+  --font-sans: 'Archivo Variable', system-ui, -apple-system, sans-serif;
+
+  --radius-tarjeta: 16px;
+}
+
+html { background: var(--color-hormigon); }
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-grafito);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Franjas de señalización (elemento firma, usar con moderación) */
+.franjas {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-ambar) 0 10px,
+    var(--color-grafito) 10px 20px
+  );
+}
+
+/* Pulsador industrial de fichaje */
+.pulsador {
+  box-shadow: 0 6px 0 0 rgb(0 0 0 / 0.18), 0 10px 24px rgb(0 0 0 / 0.15);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+.pulsador:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 0 rgb(0 0 0 / 0.18), 0 4px 10px rgb(0 0 0 / 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* Respetar la zona segura del iPhone en el menú inferior */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }

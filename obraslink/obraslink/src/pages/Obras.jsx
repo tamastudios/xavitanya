@@ -1,0 +1,159 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { Header, Card, Button, Chip, Empty, Loading, Modal, Field, Input, Select, TextArea } from '../components/UI'
+import { JOB_STATUSES, statusLabel, audit } from '../lib/helpers'
+
+const KANBAN = ['presupuesto_pendiente','presupuesto_aceptado','en_preparacion','en_proceso','pausada','pendiente_revision','acabada','facturada']
+
+function NuevaObra({ open, onClose, onSaved }) {
+  const [clients, setClients] = useState([])
+  const [f, setF] = useState({ name: '', client_id: '', address: '', description: '', status: 'presupuesto_pendiente', priority: 'normal', budget: '' })
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+
+  useEffect(() => {
+    if (open) supabase.from('clients').select('id, name').order('name').then(({ data }) => setClients(data ?? []))
+  }, [open])
+
+  async function save(e) {
+    e.preventDefault()
+    const { data, error } = await supabase.from('jobs').insert({
+      name: f.name.trim(), client_id: f.client_id || null, address: f.address.trim() || null,
+      description: f.description.trim() || null, status: f.status, priority: f.priority,
+      budget: f.budget ? Number(f.budget) : null,
+    }).select().single()
+    if (!error) {
+      await audit('crear_obra', 'jobs', data.id, { name: f.name })
+      onSaved(); onClose()
+      setF({ name: '', client_id: '', address: '', description: '', status: 'presupuesto_pendiente', priority: 'normal', budget: '' })
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Nueva obra">
+      <form onSubmit={save}>
+        <Field label="Nombre de la obra"><Input value={f.name} onChange={set('name')} placeholder="Ej: Reforma baño · Cliente García" required /></Field>
+        <Field label="Cliente">
+          <Select value={f.client_id} onChange={set('client_id')}>
+            <option value="">Sin cliente</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>
+        </Field>
+        <Field label="Dirección"><Input value={f.address} onChange={set('address')} placeholder="Calle, número, ciudad" /></Field>
+        <Field label="Descripción del trabajo"><TextArea value={f.description} onChange={set('description')} /></Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Estado">
+            <Select value={f.status} onChange={set('status')}>
+              {JOB_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="Prioridad">
+            <Select value={f.priority} onChange={set('priority')}>
+              <option value="baja">Baja</option><option value="normal">Normal</option>
+              <option value="alta">Alta</option><option value="urgente">Urgente</option>
+            </Select>
+          </Field>
+        </div>
+        <Field label="Presupuesto estimado (€)"><Input type="number" inputMode="decimal" value={f.budget} onChange={set('budget')} /></Field>
+        <Button type="submit">Crear obra</Button>
+      </form>
+    </Modal>
+  )
+}
+
+export default function Obras() {
+  const { user, isAdmin, isStaff } = useAuth()
+  const nav = useNavigate()
+  const [jobs, setJobs] = useState(null)
+  const [view, setView] = useState('kanban')
+  const [showNew, setShowNew] = useState(false)
+
+  async function load() {
+    if (isStaff) {
+      const { data } = await supabase.from('jobs')
+        .select('id, name, address, status, priority, clients(name)').order('created_at', { ascending: false })
+      setJobs(data ?? [])
+    } else {
+      const { data } = await supabase.from('job_assignments')
+        .select('jobs(id, name, address, status, priority)').eq('user_id', user.id)
+      setJobs((data ?? []).map(a => a.jobs).filter(Boolean))
+    }
+  }
+  useEffect(() => { load() }, [user.id, isStaff])
+
+  async function move(job, newStatus) {
+    await supabase.from('jobs').update({ status: newStatus }).eq('id', job.id)
+    await audit('cambiar_estado_obra', 'jobs', job.id, { de: job.status, a: newStatus })
+    load()
+  }
+
+  if (jobs === null) return <Loading />
+
+  const prioTone = (p) => p === 'urgente' ? 'danger' : p === 'alta' ? 'warn' : 'neutral'
+
+  const JobCard = ({ j, compact }) => (
+    <Card onClick={() => nav(`/obras/${j.id}`)} className={compact ? 'min-w-[240px]' : ''}>
+      <div className="flex justify-between items-start gap-2">
+        <p className="font-extrabold text-[16px] leading-snug">{j.name}</p>
+        {j.priority !== 'normal' && <Chip tone={prioTone(j.priority)}>{j.priority}</Chip>}
+      </div>
+      {j.clients?.name && <p className="text-humo text-[14px] mt-0.5">{j.clients.name}</p>}
+      {j.address && <p className="text-humo text-[13px] mt-0.5">{j.address}</p>}
+      {!compact && <div className="mt-2"><Chip>{statusLabel(j.status)}</Chip></div>}
+      {isAdmin && compact && (
+        <select className="mt-3 w-full rounded-lg border border-linea bg-hormigon px-2 py-2 text-[13px] font-semibold"
+          value={j.status} onClick={e => e.stopPropagation()} onChange={e => move(j, e.target.value)}>
+          {JOB_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+        </select>
+      )}
+    </Card>
+  )
+
+  return (
+    <div>
+      <Header title="Obras"
+        right={isAdmin && <Button variant="ambar" className="!w-auto !min-h-[44px] px-4" onClick={() => setShowNew(true)}>+ Nueva</Button>} />
+
+      {isStaff && (
+        <div className="px-5 mb-3 flex gap-2">
+          {['kanban', 'lista'].map(v => (
+            <button key={v} onClick={() => setView(v)}
+              className={`px-4 py-2 rounded-full text-[14px] font-bold ${view === v ? 'bg-grafito text-white' : 'bg-papel border border-linea text-humo'}`}>
+              {v === 'kanban' ? 'Tablero' : 'Lista'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {jobs.length === 0 && <Empty>Todavía no hay obras{isAdmin ? '. Crea la primera con el botón "+ Nueva".' : ' asignadas.'}</Empty>}
+
+      {isStaff && view === 'kanban' ? (
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-3 px-5 w-max">
+            {KANBAN.map(st => {
+              const col = jobs.filter(j => j.status === st)
+              return (
+                <div key={st} className="w-[260px]">
+                  <p className="font-extrabold text-[14px] mb-2 flex items-center gap-2">
+                    {statusLabel(st)} <span className="text-humo font-bold">({col.length})</span>
+                  </p>
+                  <div className="space-y-3">
+                    {col.map(j => <JobCard key={j.id} j={j} compact />)}
+                    {col.length === 0 && <div className="rounded-tarjeta border border-dashed border-linea h-16" />}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="px-5 space-y-3">
+          {jobs.map(j => <JobCard key={j.id} j={j} />)}
+        </div>
+      )}
+
+      <NuevaObra open={showNew} onClose={() => setShowNew(false)} onSaved={load} />
+    </div>
+  )
+}
