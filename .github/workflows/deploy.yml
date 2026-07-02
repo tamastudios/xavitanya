@@ -48,12 +48,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Switching Pages source to gh-pages branch..."
-          RESPONSE=$(gh api repos/${{ github.repository }}/pages \
-            -X PUT \
-            --field build_type=legacy \
-            --field "source[branch]=gh-pages" \
-            --field "source[path]=/" 2>&1) || true
-          echo "API response: $RESPONSE"
-          STATUS=$(gh api repos/${{ github.repository }}/pages --jq '.build_type + " / " + .source.branch' 2>&1) || true
-          echo "Current Pages config: $STATUS"
+          echo '{"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}' | \
+            gh api repos/${{ github.repository }}/pages -X PUT --input - 2>&1 || true
+          echo "Current config:"
+          gh api repos/${{ github.repository }}/pages --jq '{build_type,source}' 2>&1 || true
