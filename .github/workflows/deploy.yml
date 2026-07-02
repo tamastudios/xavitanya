@@ -9,6 +9,10 @@ permissions:
   contents: write
   pages: write
 
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -40,14 +44,16 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: obraslink/obraslink/dist
 
-      - name: Switch Pages source to gh-pages branch
+      - name: Switch Pages to branch mode
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/${{ github.repository }}/pages \
+          echo "Switching Pages source to gh-pages branch..."
+          RESPONSE=$(gh api repos/${{ github.repository }}/pages \
             -X PUT \
-            -H "Accept: application/vnd.github+json" \
-            -f "build_type=legacy" \
-            -f "source[branch]=gh-pages" \
-            -f "source[path]=/"
-          echo "Pages source updated to gh-pages branch (legacy mode)"
+            --field build_type=legacy \
+            --field "source[branch]=gh-pages" \
+            --field "source[path]=/" 2>&1) || true
+          echo "API response: $RESPONSE"
+          STATUS=$(gh api repos/${{ github.repository }}/pages --jq '.build_type + " / " + .source.branch' 2>&1) || true
+          echo "Current Pages config: $STATUS"
