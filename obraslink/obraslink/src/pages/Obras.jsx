@@ -148,7 +148,7 @@ export default function Obras() {
         </div>
       )}
 
-      {jobs.length === 0 && <Empty>Todavía no hay obras{isAdmin ? '. Crea la primera con el botón "+ Nueva".' : ' asignadas.'}</Empty>}
+      {jobs.length === 0 && <Empty>Todavía no hay obras{isAdmin ? '. Crea la primera con el botón "+ Nueva".' : ' asignadas a ti.'}</Empty>}
 
       {isStaff && view === 'kanban' ? (
         <>
