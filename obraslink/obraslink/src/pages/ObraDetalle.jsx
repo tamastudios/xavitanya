@@ -24,6 +24,8 @@ export default function ObraDetalle() {
   const [selectedMaterial, setSelectedMaterial] = useState('')
   const [materialQty, setMaterialQty] = useState('1')
   const [materialError, setMaterialError] = useState('')
+  const [removingMaterialId, setRemovingMaterialId] = useState(null)
+  const [removeQty, setRemoveQty] = useState('1')
 
   async function load() {
     const { data: j } = await supabase.from('jobs')
@@ -152,6 +154,31 @@ export default function ObraDetalle() {
     load()
   }
 
+  async function returnMaterial() {
+    if (!removingMaterialId) return
+    const mat = materialsInJob.find(m => m.material_id === removingMaterialId)
+    if (!mat) return
+    const qty = Number(removeQty)
+    if (qty <= 0 || qty > mat.totalQty) return
+
+    const { error } = await supabase.from('material_movements').insert({
+      material_id: removingMaterialId,
+      job_id: id,
+      user_id: user.id,
+      type: 'devolucion',
+      quantity: qty,
+      from_location: 'Obra',
+      to_location: 'Almacén'
+    })
+
+    if (!error) {
+      await audit('devolver_material_obra', 'material_movements', id, { material: mat.materials?.name, cantidad: qty })
+      setRemovingMaterialId(null)
+      setRemoveQty('1')
+      load()
+    }
+  }
+
   return (
     <div>
       <Header title={job.name} subtitle={job.clients?.name} right={<Chip tone="dark">{statusLabel(job.status)}</Chip>} />
@@ -276,10 +303,17 @@ export default function ObraDetalle() {
             {isAdmin && <Button variant="ambar" className="!w-auto !min-h-[40px] px-3 text-[13px]" onClick={() => setShowAddMaterial(true)}>+ Coger</Button>}
           </div>
           {materialsInJob.map(m => (
-            <div key={m.material_id} className="py-2 border-t border-linea first:border-0">
-              <div className="flex justify-between">
-                <span className="font-semibold">{m.materials?.name}</span>
-                <span className="font-bold">{m.totalQty} {m.materials?.unit}</span>
+            <div key={m.material_id} className="py-3 border-t border-linea first:border-0">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-semibold">{m.materials?.name}</p>
+                  <p className="text-[13px] text-humo">{m.totalQty} {m.materials?.unit} en obra</p>
+                </div>
+                {isAdmin && (
+                  <button onClick={() => setRemovingMaterialId(m.material_id)} className="text-[13px] font-bold text-senal hover:underline">
+                    Devolver
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -334,7 +368,7 @@ export default function ObraDetalle() {
             <Field label="Material">
               <Select value={selectedMaterial} onChange={e => { setSelectedMaterial(e.target.value); setMaterialError('') }} required>
                 <option value="">Elige un material…</option>
-                {materials.filter(m => Number(m.stock) > 0).map(m => (
+                {materials.filter(m => Number(m.stock) > 0 && !materialsInJob.some(jm => jm.material_id === m.id)).map(m => (
                   <option key={m.id} value={m.id}>{m.name} ({Number(m.stock)} {m.unit})</option>
                 ))}
               </Select>
@@ -344,6 +378,28 @@ export default function ObraDetalle() {
             </Field>
             {materialError && <div className="mb-3 p-3 bg-senal/10 border border-senal rounded-lg text-senal text-[14px]">{materialError}</div>}
             <Button type="submit" variant="ambar">Coger material</Button>
+          </form>
+        </Modal>
+      )}
+
+      {removingMaterialId && (
+        <Modal open onClose={() => { setRemovingMaterialId(null); setRemoveQty('1') }} title="Devolver material">
+          <form onSubmit={e => { e.preventDefault(); returnMaterial() }}>
+            {(() => {
+              const mat = materialsInJob.find(m => m.material_id === removingMaterialId)
+              return (
+                <>
+                  <p className="mb-4 text-humo">
+                    <span className="font-semibold text-grafito">{mat?.materials?.name}</span><br/>
+                    Disponible para devolver: <span className="font-bold">{mat?.totalQty} {mat?.materials?.unit}</span>
+                  </p>
+                  <Field label="Cantidad a devolver">
+                    <Input type="number" inputMode="decimal" min="0.5" step="0.5" max={mat?.totalQty} value={removeQty} onChange={e => setRemoveQty(e.target.value)} required />
+                  </Field>
+                  <Button type="submit" variant="ok">Devolver material</Button>
+                </>
+              )
+            })()}
           </form>
         </Modal>
       )}
