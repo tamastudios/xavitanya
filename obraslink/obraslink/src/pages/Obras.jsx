@@ -68,6 +68,7 @@ export default function Obras() {
   const [jobs, setJobs] = useState(null)
   const [view, setView] = useState('kanban')
   const [showNew, setShowNew] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState('en_proceso')
 
   async function load() {
     if (isStaff) {
@@ -88,6 +89,13 @@ export default function Obras() {
     load()
   }
 
+  async function deleteJob(jobId, jobName) {
+    if (!confirm(`¿Eliminar la obra "${jobName}"? No se puede deshacer.`)) return
+    await supabase.from('jobs').delete().eq('id', jobId)
+    await audit('eliminar_obra', 'jobs', jobId, { name: jobName })
+    load()
+  }
+
   if (jobs === null) return <Loading />
 
   const prioTone = (p) => p === 'urgente' ? 'danger' : p === 'alta' ? 'warn' : 'neutral'
@@ -95,17 +103,25 @@ export default function Obras() {
   const JobCard = ({ j, compact }) => (
     <Card onClick={() => nav(`/obras/${j.id}`)} className={compact ? 'min-w-[240px]' : ''}>
       <div className="flex justify-between items-start gap-2">
-        <p className="font-extrabold text-[16px] leading-snug">{j.name}</p>
+        <div className="flex-1">
+          <p className="font-extrabold text-[16px] leading-snug">{j.name}</p>
+          {j.clients?.name && <p className="text-humo text-[14px] mt-0.5">{j.clients.name}</p>}
+          {j.address && <p className="text-humo text-[13px] mt-0.5">{j.address}</p>}
+        </div>
         {j.priority !== 'normal' && <Chip tone={prioTone(j.priority)}>{j.priority}</Chip>}
       </div>
-      {j.clients?.name && <p className="text-humo text-[14px] mt-0.5">{j.clients.name}</p>}
-      {j.address && <p className="text-humo text-[13px] mt-0.5">{j.address}</p>}
       {!compact && <div className="mt-2"><Chip>{statusLabel(j.status)}</Chip></div>}
       {isAdmin && compact && (
         <select className="mt-3 w-full rounded-lg border border-linea bg-hormigon px-2 py-2 text-[13px] font-semibold"
           value={j.status} onClick={e => e.stopPropagation()} onChange={e => move(j, e.target.value)}>
           {JOB_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
         </select>
+      )}
+      {isAdmin && !compact && (
+        <button onClick={e => { e.stopPropagation(); deleteJob(j.id, j.name) }}
+          className="mt-3 w-full px-3 py-2 text-[14px] font-bold text-senal hover:bg-senal/10 rounded-lg">
+          Eliminar
+        </button>
       )}
     </Card>
   )
@@ -129,24 +145,42 @@ export default function Obras() {
       {jobs.length === 0 && <Empty>Todavía no hay obras{isAdmin ? '. Crea la primera con el botón "+ Nueva".' : ' asignadas.'}</Empty>}
 
       {isStaff && view === 'kanban' ? (
-        <div className="overflow-x-auto pb-4">
-          <div className="flex gap-3 px-5 w-max">
-            {KANBAN.map(st => {
-              const col = jobs.filter(j => j.status === st)
-              return (
-                <div key={st} className="w-[260px]">
-                  <p className="font-extrabold text-[14px] mb-2 flex items-center gap-2">
-                    {statusLabel(st)} <span className="text-humo font-bold">({col.length})</span>
-                  </p>
-                  <div className="space-y-3">
-                    {col.map(j => <JobCard key={j.id} j={j} compact />)}
-                    {col.length === 0 && <div className="rounded-tarjeta border border-dashed border-linea h-16" />}
-                  </div>
-                </div>
-              )
-            })}
+        <>
+          <div className="md:hidden px-5 mb-3">
+            <Select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)}>
+              {KANBAN.map(st => {
+                const count = jobs.filter(j => j.status === st).length
+                return <option key={st} value={st}>{statusLabel(st)} ({count})</option>
+              })}
+            </Select>
           </div>
-        </div>
+          <div className="hidden md:block overflow-x-auto pb-4">
+            <div className="flex gap-3 px-5 w-max">
+              {KANBAN.map(st => {
+                const col = jobs.filter(j => j.status === st)
+                return (
+                  <div key={st} className="w-[260px]">
+                    <p className="font-extrabold text-[14px] mb-2 flex items-center gap-2">
+                      {statusLabel(st)} <span className="text-humo font-bold">({col.length})</span>
+                    </p>
+                    <div className="space-y-3">
+                      {col.map(j => <JobCard key={j.id} j={j} compact />)}
+                      {col.length === 0 && <div className="rounded-tarjeta border border-dashed border-linea h-16" />}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <div className="md:hidden px-5 pb-4">
+            <div className="space-y-3">
+              {jobs.filter(j => j.status === selectedStatus).map(j => <JobCard key={j.id} j={j} />)}
+              {jobs.filter(j => j.status === selectedStatus).length === 0 && (
+                <div className="text-center text-humo py-8">No hay obras en este estado</div>
+              )}
+            </div>
+          </div>
+        </>
       ) : (
         <div className="px-5 space-y-3">
           {jobs.map(j => <JobCard key={j.id} j={j} />)}

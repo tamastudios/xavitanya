@@ -61,14 +61,14 @@ function Movimiento({ material, type, onClose, onDone, userId }) {
 }
 
 function NuevoMaterial({ open, onClose, onDone }) {
-  const [f, setF] = useState({ name: '', category: 'general', unit: 'unidad', stock: '0', min_stock: '0', location: 'Almacén principal', price: '' })
+  const [f, setF] = useState({ name: '', category: 'general', unit: 'unidad', stock: '0', min_stock: '0', price: '' })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   async function save(e) {
     e.preventDefault()
     const { error } = await supabase.from('materials').insert({
       name: f.name.trim(), category: f.category, unit: f.unit,
       stock: Number(f.stock) || 0, min_stock: Number(f.min_stock) || 0,
-      location: f.location.trim(), price: f.price ? Number(f.price) : 0,
+      location: 'Almacén', price: f.price ? Number(f.price) : 0,
     })
     if (!error) { onDone(); onClose() }
   }
@@ -84,7 +84,6 @@ function NuevoMaterial({ open, onClose, onDone }) {
           <Field label="Stock inicial"><Input type="number" inputMode="decimal" value={f.stock} onChange={set('stock')} /></Field>
           <Field label="Stock mínimo"><Input type="number" inputMode="decimal" value={f.min_stock} onChange={set('min_stock')} /></Field>
         </div>
-        <Field label="Ubicación"><Input value={f.location} onChange={set('location')} placeholder="Almacén · Pasillo · Estantería" /></Field>
         <Field label="Precio aprox. (€)"><Input type="number" inputMode="decimal" step="0.01" value={f.price} onChange={set('price')} /></Field>
         <Button type="submit">Guardar material</Button>
       </form>
@@ -120,7 +119,7 @@ export default function Almacen() {
               <div className="flex justify-between items-start gap-2">
                 <div>
                   <p className="font-extrabold text-[16px]">{m.name}</p>
-                  <p className="text-humo text-[13px]">{m.category} · {m.location}</p>
+                  <p className="text-humo text-[13px]">{m.category}</p>
                 </div>
                 <Chip tone={low ? 'danger' : 'ok'}>{Number(m.stock)} {m.unit}</Chip>
               </div>
