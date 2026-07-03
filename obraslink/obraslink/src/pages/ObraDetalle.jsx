@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Header, Card, Button, Chip, Loading, Field, Select, Input, Modal } from '../components/UI'
-import { statusLabel, fmtDate, fmtEUR, fmtHours, entryHours, signedUrl, MOVEMENT_LABELS, TOOLS, audit } from '../lib/helpers'
+import { statusLabel, fmtDate, fmtEUR, fmtHours, entryHours, signedUrl, MOVEMENT_LABELS, TOOLS, JOB_STATUSES, audit } from '../lib/helpers'
 
 export default function ObraDetalle() {
   const { id } = useParams()
@@ -26,11 +26,14 @@ export default function ObraDetalle() {
   const [materialError, setMaterialError] = useState('')
   const [removingMaterialId, setRemovingMaterialId] = useState(null)
   const [removeQty, setRemoveQty] = useState('1')
+  const [label, setLabel] = useState('')
+  const [labelSaved, setLabelSaved] = useState(false)
 
   async function load() {
     const { data: j } = await supabase.from('jobs')
       .select('*, clients(name, phone)').eq('id', id).single()
     setJob(j)
+    setLabel(j?.label ?? '')
 
     const { data: asg } = await supabase.from('job_assignments')
       .select('id, user_id, profiles(full_name)').eq('job_id', id)
@@ -82,6 +85,19 @@ export default function ObraDetalle() {
     setMaterialsInJob(Object.values(grouped))
   }
   useEffect(() => { load() }, [id])
+
+  async function saveLabel() {
+    await supabase.from('jobs').update({ label: label.trim() || null }).eq('id', id)
+    await audit('editar_etiqueta_obra', 'jobs', id, { label: label.trim() })
+    setLabelSaved(true)
+    setTimeout(() => setLabelSaved(false), 2000)
+  }
+
+  async function changeStatus(newStatus) {
+    await supabase.from('jobs').update({ status: newStatus }).eq('id', id)
+    await audit('cambiar_estado_obra', 'jobs', id, { de: job.status, a: newStatus })
+    load()
+  }
 
   if (!job) return <Loading />
 
@@ -184,6 +200,11 @@ export default function ObraDetalle() {
       <Header title={job.name} subtitle={job.clients?.name} right={<Chip tone="dark">{statusLabel(job.status)}</Chip>} />
       <div className="px-5 space-y-4">
         <Card>
+          {job.label && (
+            <div className="mb-2">
+              <span className="inline-block bg-grafito text-white text-[13px] font-bold px-3 py-1 rounded-full">{job.label}</span>
+            </div>
+          )}
           {job.address && <p className="font-semibold">{job.address}</p>}
           {job.description && <p className="text-humo mt-2 text-[15px]">{job.description}</p>}
           <div className="flex gap-4 mt-3 text-[14px] text-humo">
@@ -197,6 +218,25 @@ export default function ObraDetalle() {
             </Button>
           </div>
         </Card>
+
+        {isAdmin && (
+          <Card>
+            <h3 className="font-extrabold mb-3">Gestión de la obra</h3>
+            <Field label="Etiqueta">
+              <div className="flex gap-2">
+                <Input value={label} onChange={e => setLabel(e.target.value)} placeholder="Ej: Rasa, Urgente, Pladur…" />
+                <Button variant="ambar" className="!w-auto px-4" onClick={saveLabel}>
+                  {labelSaved ? '✓' : 'Guardar'}
+                </Button>
+              </div>
+            </Field>
+            <Field label="Estado de la obra">
+              <Select value={job.status} onChange={e => changeStatus(e.target.value)}>
+                {JOB_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </Select>
+            </Field>
+          </Card>
+        )}
 
         {isStaff && (
           <Card>
