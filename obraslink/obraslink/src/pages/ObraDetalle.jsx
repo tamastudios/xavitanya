@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Header, Card, Button, Chip, Loading, Field, Select } from '../components/UI'
+import { Header, Card, Button, Chip, Loading, Field, Select, Input, Modal } from '../components/UI'
 import { statusLabel, fmtDate, fmtEUR, fmtHours, entryHours, signedUrl, MOVEMENT_LABELS, TOOLS, audit } from '../lib/helpers'
 
 export default function ObraDetalle() {
   const { id } = useParams()
-  const { isAdmin, isStaff } = useAuth()
+  const { user, isAdmin, isStaff } = useAuth()
   const [job, setJob] = useState(null)
   const [assigned, setAssigned] = useState([])
   const [people, setPeople] = useState([])
@@ -18,6 +18,11 @@ export default function ObraDetalle() {
   const [tools, setTools] = useState([])
   const [toolsSearch, setToolsSearch] = useState('')
   const [toolsRemoveSearch, setToolsRemoveSearch] = useState('')
+  const [materials, setMaterials] = useState([])
+  const [materialsInJob, setMaterialsInJob] = useState([])
+  const [showAddMaterial, setShowAddMaterial] = useState(false)
+  const [selectedMaterial, setSelectedMaterial] = useState('')
+  const [materialQty, setMaterialQty] = useState('1')
 
   async function load() {
     const { data: j } = await supabase.from('jobs')
@@ -55,6 +60,23 @@ export default function ObraDetalle() {
     const { data: tls } = await supabase.from('job_tools')
       .select('id, tool_name').eq('job_id', id).order('tool_name')
     setTools(tls ?? [])
+
+    const { data: mat } = await supabase.from('materials').select('id, name, unit, stock').order('name')
+    setMaterials(mat ?? [])
+
+    const { data: jobMat } = await supabase.from('material_movements')
+      .select('id, material_id, quantity, materials(id, name, unit)')
+      .eq('job_id', id)
+      .in('type', ['salida'])
+      .order('created_at', { ascending: false })
+
+    const grouped = {}
+    jobMat?.forEach(m => {
+      const key = m.material_id
+      if (!grouped[key]) grouped[key] = { ...m, totalQty: 0 }
+      grouped[key].totalQty += Number(m.quantity)
+    })
+    setMaterialsInJob(Object.values(grouped))
   }
   useEffect(() => { load() }, [id])
 
@@ -90,6 +112,32 @@ export default function ObraDetalle() {
   async function removeTool(toolId) {
     await supabase.from('job_tools').delete().eq('id', toolId)
     load()
+  }
+
+  async function addMaterial() {
+    if (!selectedMaterial) return
+    const mat = materials.find(m => m.id === selectedMaterial)
+    if (!mat) return
+    const qty = Number(materialQty)
+    if (qty <= 0) return
+
+    const { error } = await supabase.from('material_movements').insert({
+      material_id: selectedMaterial,
+      job_id: id,
+      user_id: user.id,
+      type: 'salida',
+      quantity: qty,
+      from_location: 'Almacén',
+      to_location: 'Obra'
+    })
+
+    if (!error) {
+      await audit('coger_material_obra', 'material_movements', id, { material: mat.name, cantidad: qty })
+      setShowAddMaterial(false)
+      setSelectedMaterial('')
+      setMaterialQty('1')
+      load()
+    }
   }
 
   return (
@@ -211,7 +259,23 @@ export default function ObraDetalle() {
         </Card>
 
         <Card>
-          <h3 className="font-extrabold mb-2">Materiales de la obra</h3>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-extrabold">Materiales en obra</h3>
+            {isAdmin && <Button variant="ambar" className="!w-auto !min-h-[40px] px-3 text-[13px]" onClick={() => setShowAddMaterial(true)}>+ Coger</Button>}
+          </div>
+          {materialsInJob.map(m => (
+            <div key={m.material_id} className="py-2 border-t border-linea first:border-0">
+              <div className="flex justify-between">
+                <span className="font-semibold">{m.materials?.name}</span>
+                <span className="font-bold">{m.totalQty} {m.materials?.unit}</span>
+              </div>
+            </div>
+          ))}
+          {materialsInJob.length === 0 && <p className="text-humo">Sin materiales en la obra.</p>}
+        </Card>
+
+        <Card>
+          <h3 className="font-extrabold mb-2">Historial de movimientos</h3>
           {moves.map(m => (
             <div key={m.id} className="py-2 border-t border-linea first:border-0">
               <div className="flex justify-between">
@@ -221,7 +285,7 @@ export default function ObraDetalle() {
               <p className="text-humo text-[13px]">{MOVEMENT_LABELS[m.type]} · {m.profiles?.full_name} · {fmtDate(m.created_at)}</p>
             </div>
           ))}
-          {moves.length === 0 && <p className="text-humo">Sin movimientos de material.</p>}
+          {moves.length === 0 && <p className="text-humo">Sin movimientos.</p>}
         </Card>
 
         <Card>
@@ -251,6 +315,25 @@ export default function ObraDetalle() {
           </Card>
         )}
       </div>
+
+      {showAddMaterial && (
+        <Modal open onClose={() => setShowAddMaterial(false)} title="Coger material para la obra">
+          <form onSubmit={e => { e.preventDefault(); addMaterial() }}>
+            <Field label="Material">
+              <Select value={selectedMaterial} onChange={e => setSelectedMaterial(e.target.value)} required>
+                <option value="">Elige un material…</option>
+                {materials.filter(m => Number(m.stock) > 0).map(m => (
+                  <option key={m.id} value={m.id}>{m.name} ({Number(m.stock)} {m.unit})</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Cantidad">
+              <Input type="number" inputMode="decimal" min="0.5" step="0.5" value={materialQty} onChange={e => setMaterialQty(e.target.value)} required />
+            </Field>
+            <Button type="submit" variant="ambar">Coger material</Button>
+          </form>
+        </Modal>
+      )}
     </div>
   )
 }
