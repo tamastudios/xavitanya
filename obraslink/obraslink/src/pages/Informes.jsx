@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Header, Card, Chip, Loading, Field, Input, Button } from '../components/UI'
+import { Header, Card, Chip, Loading, Field, Input, Select, Button } from '../components/UI'
 import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtEUR, fmtDate, audit } from '../lib/helpers'
 
 export default function Informes() {
   const [month, setMonth] = useState(monthValue())
   const [data, setData] = useState(null)
+  const [employees, setEmployees] = useState([])
+  const [selectedEmp, setSelectedEmp] = useState('')
 
   async function load() {
     setData(null)
     const { from, to } = monthRange(month)
-    const [{ data: entries }, { data: reports }, { data: invoices }] = await Promise.all([
+    const [{ data: entries }, { data: reports }, { data: invoices }, { data: emps }] = await Promise.all([
       supabase.from('time_entries')
         .select('user_id, job_id, clock_in, clock_out, break_minutes, profiles(full_name), jobs(name, clients(name))')
         .gte('clock_in', from).lt('clock_in', to).not('clock_out', 'is', null),
@@ -18,8 +20,10 @@ export default function Informes() {
         .select('id, report_date, work_done, status, profiles(full_name), jobs(name)')
         .eq('status', 'pendiente').order('report_date', { ascending: false }),
       supabase.from('invoices').select('*, profiles(full_name)').eq('month', month).order('created_at'),
+      supabase.from('profiles').select('id, full_name').eq('active', true).order('full_name'),
     ])
     setData({ entries: entries ?? [], reports: reports ?? [], invoices: invoices ?? [] })
+    setEmployees(emps ?? [])
   }
   useEffect(() => { load() }, [month])
 
@@ -35,6 +39,10 @@ export default function Informes() {
     byEmployee[emp].total += h
     byEmployee[emp].jobs[job] = (byEmployee[emp].jobs[job] ?? 0) + h
   }
+
+  const filteredEmployees = selectedEmp
+    ? Object.entries(byEmployee).filter(([emp]) => emp === selectedEmp)
+    : Object.entries(byEmployee)
 
   function exportCSV() {
     const rows = [['Empleado', 'Obra', 'Horas', 'Mes']]
@@ -71,9 +79,16 @@ export default function Informes() {
           <Button variant="ghost" className="!w-auto px-4 mb-4" onClick={exportCSV}>Exportar CSV</Button>
         </div>
 
+        <Field label="Empleado">
+          <Select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)}>
+            <option value="">Todos los empleados</option>
+            {employees.map(emp => <option key={emp.id} value={emp.full_name}>{emp.full_name}</option>)}
+          </Select>
+        </Field>
+
         <h3 className="font-extrabold text-[18px]">Horas por empleado y obra</h3>
-        {Object.keys(byEmployee).length === 0 && <Card><p className="text-humo">Sin fichajes cerrados este mes.</p></Card>}
-        {Object.entries(byEmployee).map(([emp, d]) => (
+        {filteredEmployees.length === 0 && <Card><p className="text-humo">Sin fichajes cerrados este mes.</p></Card>}
+        {filteredEmployees.map(([emp, d]) => (
           <Card key={emp}>
             <div className="flex justify-between items-center">
               <p className="font-extrabold text-[17px]">{emp}</p>
