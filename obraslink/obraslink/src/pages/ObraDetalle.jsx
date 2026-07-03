@@ -23,6 +23,7 @@ export default function ObraDetalle() {
   const [showAddMaterial, setShowAddMaterial] = useState(false)
   const [selectedMaterial, setSelectedMaterial] = useState('')
   const [materialQty, setMaterialQty] = useState('1')
+  const [materialError, setMaterialError] = useState('')
 
   async function load() {
     const { data: j } = await supabase.from('jobs')
@@ -115,11 +116,19 @@ export default function ObraDetalle() {
   }
 
   async function addMaterial() {
+    setMaterialError('')
     if (!selectedMaterial) return
     const mat = materials.find(m => m.id === selectedMaterial)
     if (!mat) return
     const qty = Number(materialQty)
-    if (qty <= 0) return
+    if (qty <= 0) {
+      setMaterialError('La cantidad debe ser mayor a 0')
+      return
+    }
+    if (qty > Number(mat.stock)) {
+      setMaterialError(`Solo hay ${mat.stock} ${mat.unit} disponibles`)
+      return
+    }
 
     const { error } = await supabase.from('material_movements').insert({
       material_id: selectedMaterial,
@@ -131,13 +140,16 @@ export default function ObraDetalle() {
       to_location: 'Obra'
     })
 
-    if (!error) {
-      await audit('coger_material_obra', 'material_movements', id, { material: mat.name, cantidad: qty })
-      setShowAddMaterial(false)
-      setSelectedMaterial('')
-      setMaterialQty('1')
-      load()
+    if (error) {
+      setMaterialError(error.message)
+      return
     }
+
+    await audit('coger_material_obra', 'material_movements', id, { material: mat.name, cantidad: qty })
+    setShowAddMaterial(false)
+    setSelectedMaterial('')
+    setMaterialQty('1')
+    load()
   }
 
   return (
@@ -317,10 +329,10 @@ export default function ObraDetalle() {
       </div>
 
       {showAddMaterial && (
-        <Modal open onClose={() => setShowAddMaterial(false)} title="Coger material para la obra">
+        <Modal open onClose={() => { setShowAddMaterial(false); setMaterialError('') }} title="Coger material para la obra">
           <form onSubmit={e => { e.preventDefault(); addMaterial() }}>
             <Field label="Material">
-              <Select value={selectedMaterial} onChange={e => setSelectedMaterial(e.target.value)} required>
+              <Select value={selectedMaterial} onChange={e => { setSelectedMaterial(e.target.value); setMaterialError('') }} required>
                 <option value="">Elige un material…</option>
                 {materials.filter(m => Number(m.stock) > 0).map(m => (
                   <option key={m.id} value={m.id}>{m.name} ({Number(m.stock)} {m.unit})</option>
@@ -328,8 +340,9 @@ export default function ObraDetalle() {
               </Select>
             </Field>
             <Field label="Cantidad">
-              <Input type="number" inputMode="decimal" min="0.5" step="0.5" value={materialQty} onChange={e => setMaterialQty(e.target.value)} required />
+              <Input type="number" inputMode="decimal" min="0.5" step="0.5" value={materialQty} onChange={e => { setMaterialQty(e.target.value); setMaterialError('') }} required />
             </Field>
+            {materialError && <div className="mb-3 p-3 bg-senal/10 border border-senal rounded-lg text-senal text-[14px]">{materialError}</div>}
             <Button type="submit" variant="ambar">Coger material</Button>
           </form>
         </Modal>
