@@ -10,9 +10,10 @@ export default function Login() {
 
   async function signIn(e) {
     e.preventDefault()
+    if (password.length !== 4) return setMsg({ tone: 'danger', text: 'El PIN debe tener 4 dígitos.' })
     setBusy(true); setMsg(null)
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-    if (error) setMsg({ tone: 'danger', text: 'Email o contraseña incorrectos. Revisa los datos e inténtalo otra vez.' })
+    if (error) setMsg({ tone: 'danger', text: 'Email o PIN incorrectos. Revisa los datos e inténtalo otra vez.' })
     setBusy(false)
   }
 
@@ -35,17 +36,18 @@ export default function Login() {
           <Input type="email" autoComplete="email" inputMode="email" value={email}
             onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" required />
         </Field>
-        <Field label="Contraseña">
-          <Input type="password" autoComplete="current-password" value={password}
-            onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+        <Field label="PIN (4 dígitos)">
+          <Input type="text" inputMode="numeric" maxLength="4" autoComplete="off" value={password}
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, '')
+              setPassword(val)
+            }}
+            placeholder="0000" required />
         </Field>
         {msg && <div className="mb-4"><Banner tone={msg.tone}>{msg.text}</Banner></div>}
         <Button type="submit" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</Button>
       </form>
 
-      <button onClick={recover} className="mt-5 text-humo font-semibold underline underline-offset-4">
-        He olvidado mi contraseña
-      </button>
       <p className="text-humo text-[13px] mt-8">
         ¿No tienes cuenta? Pide al administrador que te dé de alta.
       </p>
