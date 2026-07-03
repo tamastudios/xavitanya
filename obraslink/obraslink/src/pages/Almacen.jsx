@@ -112,16 +112,14 @@ export default function Almacen() {
       <div className="px-5 space-y-3">
         <Input placeholder="Buscar material…" value={q} onChange={e => setQ(e.target.value)} />
         {list.length === 0 && <Empty>No hay materiales que coincidan.</Empty>}
-        {list.map(m => {
-          const low = Number(m.stock) <= Number(m.min_stock)
-          return (
+        {list.map(m => (
             <Card key={m.id}>
               <div className="flex justify-between items-start gap-2">
                 <div>
                   <p className="font-extrabold text-[16px]">{m.name}</p>
                   <p className="text-humo text-[13px]">{m.category}</p>
                 </div>
-                <Chip tone={low ? 'danger' : 'ok'}>{Number(m.stock)} {m.unit}</Chip>
+                <p className="font-bold text-[15px]">{Number(m.stock)} {m.unit}</p>
               </div>
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <Button variant="ambar" className="min-h-[48px] text-[15px]"
@@ -130,8 +128,7 @@ export default function Almacen() {
                   onClick={() => setMove({ material: m, type: 'devolucion' })}>Devolver</Button>
               </div>
             </Card>
-          )
-        })}
+        )}
       </div>
 
       {move && <Movimiento material={move.material} type={move.type} userId={user.id}
