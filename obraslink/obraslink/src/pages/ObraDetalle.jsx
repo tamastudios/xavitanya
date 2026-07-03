@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Header, Card, Button, Chip, Loading, Field, Select } from '../components/UI'
-import { statusLabel, fmtDate, fmtEUR, fmtHours, entryHours, signedUrl, MOVEMENT_LABELS, audit } from '../lib/helpers'
+import { statusLabel, fmtDate, fmtEUR, fmtHours, entryHours, signedUrl, MOVEMENT_LABELS, TOOLS, audit } from '../lib/helpers'
 
 export default function ObraDetalle() {
   const { id } = useParams()
@@ -15,6 +15,9 @@ export default function ObraDetalle() {
   const [reports, setReports] = useState([])
   const [photos, setPhotos] = useState([])
   const [hours, setHours] = useState(0)
+  const [tools, setTools] = useState([])
+  const [toolsSearch, setToolsSearch] = useState('')
+  const [toolsRemoveSearch, setToolsRemoveSearch] = useState('')
 
   async function load() {
     const { data: j } = await supabase.from('jobs')
@@ -48,6 +51,10 @@ export default function ObraDetalle() {
       .select('path').eq('job_id', id).order('created_at', { ascending: false }).limit(12)
     const urls = await Promise.all((media ?? []).map(m => signedUrl(m.path)))
     setPhotos(urls.filter(Boolean))
+
+    const { data: tls } = await supabase.from('job_tools')
+      .select('id, tool_name').eq('job_id', id).order('tool_name')
+    setTools(tls ?? [])
   }
   useEffect(() => { load() }, [id])
 
@@ -68,6 +75,20 @@ export default function ObraDetalle() {
   }
   async function unassign(aid) {
     await supabase.from('job_assignments').delete().eq('id', aid)
+    load()
+  }
+
+  async function addTool(toolName) {
+    if (!toolName.trim()) return
+    if (tools.some(t => t.tool_name.toLowerCase() === toolName.toLowerCase())) return
+    await supabase.from('job_tools').insert({ job_id: id, tool_name: toolName })
+    await audit('asignar_herramienta', 'job_tools', id, { tool: toolName })
+    setToolsSearch('')
+    load()
+  }
+
+  async function removeTool(toolId) {
+    await supabase.from('job_tools').delete().eq('id', toolId)
     load()
   }
 
@@ -118,6 +139,73 @@ export default function ObraDetalle() {
                     .map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
                 </Select>
               </Field>
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <h3 className="font-extrabold mb-2">Herramientas</h3>
+          {isAdmin && (
+            <div className="mb-3 space-y-2">
+              <input
+                type="text"
+                placeholder="Buscar herramienta para quitar…"
+                value={toolsRemoveSearch}
+                onChange={e => setToolsRemoveSearch(e.target.value)}
+                className="w-full px-3 py-2 border border-linea rounded-lg text-[15px]"
+              />
+              {toolsRemoveSearch && (
+                <div className="bg-fondo-2 rounded-lg border border-linea max-h-48 overflow-y-auto">
+                  {tools.filter(t =>
+                    t.tool_name.toLowerCase().includes(toolsRemoveSearch.toLowerCase())
+                  ).map(tool => (
+                    <button
+                      key={tool.id}
+                      onClick={() => { removeTool(tool.id); setToolsRemoveSearch('') }}
+                      className="w-full text-left px-3 py-2 hover:bg-linea text-[15px] border-b border-linea last:border-0 flex justify-between items-center"
+                    >
+                      <span>{tool.tool_name}</span>
+                      <span className="text-senal font-bold">Quitar</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {tools.filter(t =>
+            !toolsRemoveSearch || t.tool_name.toLowerCase().includes(toolsRemoveSearch.toLowerCase())
+          ).map(t => (
+            <div key={t.id} className="flex justify-between items-center py-2 border-t border-linea first:border-0">
+              <span className="font-semibold">{t.tool_name}</span>
+              {isAdmin && !toolsRemoveSearch && <button onClick={() => removeTool(t.id)} className="text-senal text-[14px] font-bold">Quitar</button>}
+            </div>
+          ))}
+          {tools.length === 0 && <p className="text-humo">Sin herramientas asignadas.</p>}
+          {isAdmin && (
+            <div className="mt-3 space-y-2">
+              <input
+                type="text"
+                placeholder="Buscar herramienta para añadir…"
+                value={toolsSearch}
+                onChange={e => setToolsSearch(e.target.value)}
+                className="w-full px-3 py-2 border border-linea rounded-lg text-[15px]"
+              />
+              {toolsSearch && (
+                <div className="bg-fondo-2 rounded-lg border border-linea max-h-48 overflow-y-auto">
+                  {TOOLS.filter(t =>
+                    t.toLowerCase().includes(toolsSearch.toLowerCase()) &&
+                    !tools.some(jt => jt.tool_name.toLowerCase() === t.toLowerCase())
+                  ).map(tool => (
+                    <button
+                      key={tool}
+                      onClick={() => addTool(tool)}
+                      className="w-full text-left px-3 py-2 hover:bg-linea text-[15px] border-b border-linea last:border-0"
+                    >
+                      {tool}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </Card>

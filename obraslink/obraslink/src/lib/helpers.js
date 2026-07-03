@@ -27,6 +27,23 @@ export const MOVEMENT_LABELS = {
   roto_perdido: 'Roto / perdido',
 }
 
+// ---------- Herramientas (para obras) ----------
+export const TOOLS = [
+  'Aspiradora', 'Escoba', 'Radial (amoladora)', 'Radial aspiradora',
+  'Makita pequeña', 'Makita mediana', 'Makita grande',
+  'Alargaderas', 'Pata de cabra', 'Pala plana', 'Pala redonda',
+  'Atornillador eléctrico', 'Taladrador', 'Caja de herramientas',
+  'Casco de seguridad', 'Gafas de protección', 'Guantes de trabajo',
+  'Botas de seguridad', 'Arnés de seguridad', 'Chaleco reflectante',
+  'Escalera de aluminio', 'Escalera grande', 'Andamio',
+  'Martillo grande', 'Nivel', 'Cinta métrica', 'Destornillador',
+  'Llaves', 'Pico', 'Azada', 'Cepillo', 'Cincel', 'Serrucho',
+  'Sierra circular', 'Hormigonera', 'Vibrador de hormigón',
+  'Apisonadora', 'Maza', 'Disco de corte', 'Piedra de afilar',
+  'Mascarilla', 'Buzo', 'Flexómetro', 'Plomada', 'Escuadra',
+  'Compás', 'Lápiz carpintero', 'Rotulador',
+]
+
 // ---------- Fechas y formato ----------
 export const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
