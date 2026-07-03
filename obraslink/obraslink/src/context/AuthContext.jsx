@@ -8,16 +8,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const inactivityTimeoutRef = React.useRef(null)
-
-  const resetInactivityTimer = () => {
-    if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current)
-    if (!session?.user) return
-
-    inactivityTimeoutRef.current = setTimeout(() => {
-      supabase.auth.signOut()
-    }, 5 * 60 * 1000)
-  }
+  const timeoutRef = React.useRef(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -29,13 +20,25 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (!session?.user) return
-    resetInactivityTimer()
+    if (!session?.user) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      return
+    }
+
+    const resetTimer = () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => {
+        supabase.auth.signOut()
+      }, 5 * 60 * 1000)
+    }
+
+    resetTimer()
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
-    events.forEach(e => window.addEventListener(e, resetInactivityTimer))
+    events.forEach(e => window.addEventListener(e, resetTimer))
+
     return () => {
-      if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current)
-      events.forEach(e => window.removeEventListener(e, resetInactivityTimer))
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      events.forEach(e => window.removeEventListener(e, resetTimer))
     }
   }, [session?.user])
 
