@@ -1,4 +1,4 @@
-# ObrasLink · Gestión de obras para empresas de reformas (MVP)
+# Xavi Tanya Serveis Integrals · Gestión de obras para empresas de reformas (MVP)
 
 Aplicación web instalable en el móvil (PWA) para gestionar obras, fichajes, partes diarios, almacén y partes mensuales facturables de autónomos. En español, mobile-first, con botones grandes y pensada para personal no técnico.
 

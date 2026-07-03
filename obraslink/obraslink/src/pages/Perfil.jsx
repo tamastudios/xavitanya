@@ -102,7 +102,7 @@ export default function Perfil() {
         </Card>
 
         <Button variant="ghost" onClick={signOut}>Cerrar sesión</Button>
-        <p className="text-humo text-[12px] text-center pb-2">ObrasLink · versión MVP 0.1</p>
+        <p className="text-humo text-[12px] text-center pb-2">Xavi Tanya Serveis Integrals · versión MVP 0.1</p>
       </div>
     </div>
   )

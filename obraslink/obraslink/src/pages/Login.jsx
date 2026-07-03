@@ -20,7 +20,7 @@ export default function Login() {
   return (
     <div className="min-h-dvh flex flex-col justify-center max-w-lg mx-auto px-6">
       <div className="franjas h-2 rounded-full mb-8" />
-      <h1 className="text-[34px] font-extrabold tracking-tight leading-none">ObrasLink</h1>
+      <h1 className="text-[28px] font-extrabold tracking-tight leading-tight">Xavi Tanya Serveis Integrals</h1>
       <p className="text-humo mt-2 mb-8 text-[17px]">Fichajes, partes y almacén de tu empresa.</p>
 
       <form onSubmit={signIn}>

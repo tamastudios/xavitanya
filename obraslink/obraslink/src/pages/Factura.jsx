@@ -107,7 +107,7 @@ export default function Factura() {
       if (y > 280) { doc.addPage(); y = 20 }
     }
     doc.setFontSize(8)
-    doc.text('Documento borrador generado con ObrasLink. No es una factura legal certificada.', 15, 290)
+    doc.text('Documento borrador generado con Xavi Tanya Serveis Integrals. No es una factura legal certificada.', 15, 290)
     doc.save(`parte_mensual_${month}.pdf`)
     if (invoice) await supabase.from('invoices').update({ status: invoice.status === 'aprobado' ? 'exportado' : invoice.status }).eq('id', invoice.id)
   }

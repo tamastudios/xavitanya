@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
-        name: 'ObrasLink · Gestión de obras',
-        short_name: 'ObrasLink',
+        name: 'Xavi Tanya Serveis Integrals',
+        short_name: 'Xavi Tanya',
         description: 'Fichajes, partes diarios, almacén y obras para tu empresa de reformas',
         lang: 'es',
         start_url: '/',
