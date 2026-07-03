@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Header, Card, Button, Chip, Loading, Field, Input } from '../components/UI'
-import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtDate, fmtTime } from '../lib/helpers'
+import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtDate, fmtTime, audit } from '../lib/helpers'
 
 const ROLES = { admin: 'Administrador', encargado: 'Encargado', empleado: 'Empleado' }
 
@@ -14,14 +14,23 @@ export default function Perfil() {
 
   useEffect(() => { if (profile) setName(profile.full_name ?? '') }, [profile])
 
-  useEffect(() => {
+  function loadEntries() {
     const { from, to } = monthRange(month)
     supabase.from('time_entries')
       .select('id, clock_in, clock_out, break_minutes, jobs(name)')
       .eq('user_id', user.id).gte('clock_in', from).lt('clock_in', to)
       .order('clock_in', { ascending: false })
       .then(({ data }) => setEntries(data ?? []))
-  }, [month, user.id])
+  }
+  useEffect(() => { loadEntries() }, [month, user.id])
+
+  async function deleteEntry(id) {
+    if (!confirm('¿Borrar este fichaje? No se puede deshacer.')) return
+    const { error } = await supabase.from('time_entries').delete().eq('id', id)
+    if (error) { alert('No se pudo borrar: ' + error.message); return }
+    await audit('borrar_fichaje', 'time_entries', id)
+    loadEntries()
+  }
 
   async function saveName() {
     if (name.trim() && name.trim() !== profile?.full_name) {
@@ -52,15 +61,18 @@ export default function Perfil() {
           <Field label="Mes"><Input type="month" value={month} onChange={e => setMonth(e.target.value)} /></Field>
           {entries.length === 0 && <p className="text-humo">Sin fichajes en {monthLabel(month)}.</p>}
           {entries.map(e => (
-            <div key={e.id} className="flex justify-between py-2 border-t border-linea text-[15px]">
-              <div>
+            <div key={e.id} className="flex justify-between items-center gap-3 py-2 border-t border-linea text-[15px]">
+              <div className="min-w-0">
                 <p className="font-semibold">{fmtDate(e.clock_in)} · {e.jobs?.name ?? 'Sin obra'}</p>
                 <p className="text-humo text-[13px]">
                   {fmtTime(e.clock_in)} → {e.clock_out ? fmtTime(e.clock_out) : 'abierto'}
                   {e.break_minutes > 0 ? ` · ${e.break_minutes} min pausa` : ''}
                 </p>
               </div>
-              <span className="font-bold">{e.clock_out ? fmtHours(entryHours(e)) : '—'}</span>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="font-bold">{e.clock_out ? fmtHours(entryHours(e)) : '—'}</span>
+                <button onClick={() => deleteEntry(e.id)} className="text-senal text-[13px] font-bold">Borrar</button>
+              </div>
             </div>
           ))}
         </Card>
