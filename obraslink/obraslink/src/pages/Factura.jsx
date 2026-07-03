@@ -43,7 +43,9 @@ export default function Factura() {
 
   const totalHours = Math.round(lines.reduce((s, l) => s + l.hours, 0) * 100) / 100
   const r = Number(rate) || 0
-  const total = Math.round(totalHours * r * 100) / 100
+  const base = Math.round(totalHours * r * 100) / 100
+  const iva = Math.round(base * 0.21 * 100) / 100
+  const total = Math.round((base + iva) * 100) / 100
 
   async function saveDraft(send = false) {
     setMsg(null)
@@ -85,8 +87,11 @@ export default function Factura() {
       if (y > 250) { doc.addPage(); y = 20 }
     }
     line(y); y += 8
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Base (${fmtHours(totalHours)}): ${fmtEUR(base)}`, 15, y); y += 7
+    doc.text(`IVA (21%): ${fmtEUR(iva)}`, 15, y); y += 7
     doc.setFont('helvetica', 'bold')
-    doc.text(`TOTAL: ${fmtHours(totalHours)}  ·  ${fmtEUR(total)}`, 15, y)
+    doc.text(`TOTAL CON IVA: ${fmtEUR(total)}`, 15, y)
     y += 12
     if (notes.trim()) { doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(`Observaciones: ${notes.trim()}`, 180), 15, y); y += 14 }
 
@@ -131,9 +136,19 @@ export default function Factura() {
               <span className="font-bold whitespace-nowrap">{fmtHours(l.hours)} · {fmtEUR(l.hours * r)}</span>
             </div>
           ))}
-          <div className="flex justify-between items-center pt-3 mt-1 border-t-2 border-grafito">
-            <span className="font-extrabold text-[17px]">Total</span>
-            <Chip tone="dark">{fmtHours(totalHours)} · {fmtEUR(total)}</Chip>
+          <div className="pt-3 mt-1 border-t-2 border-grafito space-y-1.5">
+            <div className="flex justify-between text-[15px]">
+              <span className="text-humo">Base ({fmtHours(totalHours)})</span>
+              <span className="font-semibold">{fmtEUR(base)}</span>
+            </div>
+            <div className="flex justify-between text-[15px]">
+              <span className="text-humo">IVA (21%)</span>
+              <span className="font-semibold">{fmtEUR(iva)}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 mt-1 border-t border-linea">
+              <span className="font-extrabold text-[17px]">Total con IVA</span>
+              <Chip tone="dark">{fmtEUR(total)}</Chip>
+            </div>
           </div>
         </Card>
 
