@@ -112,10 +112,16 @@ export default function Obras() {
       </div>
       {!compact && <div className="mt-2"><Chip>{statusLabel(j.status)}</Chip></div>}
       {isAdmin && compact && (
-        <select className="mt-3 w-full rounded-lg border border-linea bg-hormigon px-2 py-2 text-[13px] font-semibold"
-          value={j.status} onClick={e => e.stopPropagation()} onChange={e => move(j, e.target.value)}>
-          {JOB_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-        </select>
+        <>
+          <select className="mt-3 w-full rounded-lg border border-linea bg-hormigon px-2 py-2 text-[13px] font-semibold"
+            value={j.status} onClick={e => e.stopPropagation()} onChange={e => move(j, e.target.value)}>
+            {JOB_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+          <button onClick={e => { e.stopPropagation(); deleteJob(j.id, j.name) }}
+            className="mt-2 w-full px-3 py-2 text-[13px] font-bold text-senal hover:bg-senal/10 rounded-lg">
+            Eliminar
+          </button>
+        </>
       )}
       {isAdmin && !compact && (
         <button onClick={e => { e.stopPropagation(); deleteJob(j.id, j.name) }}
