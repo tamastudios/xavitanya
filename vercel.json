@@ -1,4 +1,4 @@
 {
-  "buildCommand": "cd obraslink/obraslink && npm run build",
+  "buildCommand": "npm install --prefix obraslink/obraslink && npm run build --prefix obraslink/obraslink",
   "outputDirectory": "obraslink/obraslink/dist"
 }
