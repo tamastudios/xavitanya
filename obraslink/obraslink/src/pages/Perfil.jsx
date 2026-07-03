@@ -17,10 +17,17 @@ export default function Perfil() {
   useEffect(() => {
     const { from, to } = monthRange(month)
     supabase.from('time_entries')
-      .select('id, clock_in, clock_out, break_minutes, jobs(name)')
+      .select('id, clock_in, clock_out, break_minutes, job_id')
       .eq('user_id', user.id).gte('clock_in', from).lt('clock_in', to)
       .order('clock_in', { ascending: false })
-      .then(({ data }) => setEntries(data ?? []))
+      .then(async ({ data }) => {
+        if (!data) return setEntries([])
+        const jobIds = [...new Set(data.map(e => e.job_id).filter(Boolean))]
+        if (jobIds.length === 0) return setEntries(data)
+        const { data: jobs } = await supabase.from('jobs').select('id, name').in('id', jobIds)
+        const jobMap = Object.fromEntries((jobs ?? []).map(j => [j.id, j.name]))
+        setEntries(data.map(e => ({ ...e, jobs: { name: jobMap[e.job_id] ?? null } })))
+      })
   }, [month, user.id])
 
   async function saveName() {
