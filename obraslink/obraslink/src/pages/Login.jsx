@@ -37,10 +37,10 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" required />
         </Field>
         <Field label="PIN (4 dígitos)">
-          <Input type="text" inputMode="numeric" maxLength="4" autoComplete="off" value={password}
+          <Input type="tel" maxLength="4" autoComplete="off" value={password}
             onChange={(e) => {
               const val = e.target.value.replace(/[^0-9]/g, '')
-              setPassword(val)
+              setPassword(val.slice(0, 4))
             }}
             placeholder="0000" required />
         </Field>
