@@ -71,7 +71,7 @@ export default function Factura() {
     doc.setFontSize(11); doc.setFont('helvetica', 'normal')
     doc.text(`Autónomo: ${profile?.full_name ?? ''}`, 15, 32)
     doc.text(`Mes: ${monthLabel(month)}`, 15, 39)
-    doc.text(`Tarifa: ${fmtEUR(r)}/hora`, 15, 46)
+    doc.text(`Tarifa: ${fmtEUR(r)}/hora (sin IVA)`, 15, 46)
     line(52)
 
     let y = 62
@@ -118,7 +118,7 @@ export default function Factura() {
       <div className="px-5 space-y-4">
         <div className="flex gap-3">
           <div className="flex-1"><Field label="Mes"><Input type="month" value={month} onChange={e => setMonth(e.target.value)} /></Field></div>
-          <div className="w-36"><Field label="€/hora"><Input type="number" inputMode="decimal" step="0.5" value={rate} onChange={e => setRate(e.target.value)} /></Field></div>
+          <div className="w-36"><Field label="€/hora (sin IVA)"><Input type="number" inputMode="decimal" step="0.5" value={rate} onChange={e => setRate(e.target.value)} /></Field></div>
         </div>
 
         {invoice && (

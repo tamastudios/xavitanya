@@ -122,14 +122,16 @@ export default function ObraDetalle() {
   async function addTool(toolName) {
     if (!toolName.trim()) return
     if (tools.some(t => t.tool_name.toLowerCase() === toolName.toLowerCase())) return
-    await supabase.from('job_tools').insert({ job_id: id, tool_name: toolName })
+    const { error } = await supabase.from('job_tools').insert({ job_id: id, tool_name: toolName })
+    if (error) { alert('No se pudo añadir la herramienta: ' + error.message); return }
     await audit('asignar_herramienta', 'job_tools', id, { tool: toolName })
     setToolsSearch('')
     load()
   }
 
   async function removeTool(toolId) {
-    await supabase.from('job_tools').delete().eq('id', toolId)
+    const { error } = await supabase.from('job_tools').delete().eq('id', toolId)
+    if (error) { alert('No se pudo quitar la herramienta: ' + error.message); return }
     load()
   }
 

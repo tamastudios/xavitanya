@@ -103,19 +103,17 @@ function InicioAdmin() {
 
   useEffect(() => {
     async function load() {
-      const [{ count: activas }, { data: abiertos }, { count: partes }, { data: mats }, { count: facturas }] =
+      const [{ count: activas }, { data: abiertos }, { count: partes }, { count: facturas }] =
         await Promise.all([
           supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'en_proceso'),
           supabase.from('time_entries').select('id, clock_in, profiles(full_name), jobs(name)').is('clock_out', null),
           supabase.from('daily_reports').select('id', { count: 'exact', head: true }).eq('status', 'pendiente'),
-          supabase.from('materials').select('id, name, stock, min_stock, unit'),
           supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('status', 'enviado'),
         ])
       setStats({
         activas: activas ?? 0,
         abiertos: abiertos ?? [],
         partes: partes ?? 0,
-        low: (mats ?? []).filter(m => Number(m.stock) <= Number(m.min_stock)),
         facturas: facturas ?? 0,
       })
     }
@@ -155,18 +153,6 @@ function InicioAdmin() {
               <div key={e.id} className="flex justify-between py-2 border-t border-linea first:border-0">
                 <span className="font-semibold">{e.profiles?.full_name}</span>
                 <span className="text-humo">{e.jobs?.name ?? 'Sin obra'} · {fmtTime(e.clock_in)}</span>
-              </div>
-            ))}
-          </Card>
-        )}
-
-        {stats.low.length > 0 && (
-          <Card onClick={() => nav('/almacen')}>
-            <h3 className="font-extrabold mb-2 text-senal">Poco stock</h3>
-            {stats.low.slice(0, 5).map(m => (
-              <div key={m.id} className="flex justify-between py-1.5">
-                <span>{m.name}</span>
-                <Chip tone="danger">{Number(m.stock)} {m.unit}</Chip>
               </div>
             ))}
           </Card>

@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Header, Card, Button, Chip, Empty, Loading, Modal, Field, Input, Select, TextArea } from '../components/UI'
+import { Header, Card, Button, Chip, Empty, Loading, Modal, Field, Input, Select, TextArea, Banner } from '../components/UI'
 import { JOB_STATUSES, statusLabel, audit } from '../lib/helpers'
 
 const KANBAN = ['presupuesto_pendiente','presupuesto_aceptado','en_preparacion','en_proceso','pausada','pendiente_revision','acabada','facturada']
 
 function NuevaObra({ open, onClose, onSaved }) {
   const [clients, setClients] = useState([])
+  const [err, setErr] = useState(null)
   const [f, setF] = useState({ name: '', client_id: '', address: '', description: '', status: 'presupuesto_pendiente', priority: 'normal', budget: '' })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
@@ -18,16 +19,16 @@ function NuevaObra({ open, onClose, onSaved }) {
 
   async function save(e) {
     e.preventDefault()
+    setErr(null)
     const { data, error } = await supabase.from('jobs').insert({
       name: f.name.trim(), client_id: f.client_id || null, address: f.address.trim() || null,
       description: f.description.trim() || null, status: f.status, priority: f.priority,
       budget: f.budget ? Number(f.budget) : null,
     }).select().single()
-    if (!error) {
-      await audit('crear_obra', 'jobs', data.id, { name: f.name })
-      onSaved(); onClose()
-      setF({ name: '', client_id: '', address: '', description: '', status: 'presupuesto_pendiente', priority: 'normal', budget: '' })
-    }
+    if (error) return setErr('No se pudo crear la obra: ' + error.message)
+    await audit('crear_obra', 'jobs', data.id, { name: f.name })
+    onSaved(); onClose()
+    setF({ name: '', client_id: '', address: '', description: '', status: 'presupuesto_pendiente', priority: 'normal', budget: '' })
   }
 
   return (
@@ -56,6 +57,7 @@ function NuevaObra({ open, onClose, onSaved }) {
           </Field>
         </div>
         <Field label="Presupuesto estimado (€)"><Input type="number" inputMode="decimal" value={f.budget} onChange={set('budget')} /></Field>
+        {err && <div className="mb-4"><Banner tone="danger">{err}</Banner></div>}
         <Button type="submit">Crear obra</Button>
       </form>
     </Modal>
@@ -73,11 +75,11 @@ export default function Obras() {
   async function load() {
     if (isStaff) {
       const { data } = await supabase.from('jobs')
-        .select('id, name, address, status, priority, clients(name)').order('created_at', { ascending: false })
+        .select('id, name, address, status, priority, label, clients(name)').order('created_at', { ascending: false })
       setJobs(data ?? [])
     } else {
       const { data } = await supabase.from('job_assignments')
-        .select('jobs(id, name, address, status, priority)').eq('user_id', user.id)
+        .select('jobs(id, name, address, status, priority, label)').eq('user_id', user.id)
       setJobs((data ?? []).map(a => a.jobs).filter(Boolean))
     }
   }
@@ -90,8 +92,12 @@ export default function Obras() {
   }
 
   async function deleteJob(jobId, jobName) {
-    if (!confirm(`¿Eliminar la obra "${jobName}"? No se puede deshacer.`)) return
-    await supabase.from('jobs').delete().eq('id', jobId)
+    if (!confirm(`¿Eliminar la obra "${jobName}"? Se borrará todo lo relacionado. No se puede deshacer.`)) return
+    const { error } = await supabase.from('jobs').delete().eq('id', jobId)
+    if (error) {
+      alert('No se pudo eliminar la obra. Puede que tenga fichajes o datos asociados.\n\nDetalle: ' + error.message)
+      return
+    }
     await audit('eliminar_obra', 'jobs', jobId, { name: jobName })
     load()
   }
@@ -108,7 +114,10 @@ export default function Obras() {
           {j.clients?.name && <p className="text-humo text-[14px] mt-0.5">{j.clients.name}</p>}
           {j.address && <p className="text-humo text-[13px] mt-0.5">{j.address}</p>}
         </div>
-        {j.priority !== 'normal' && <Chip tone={prioTone(j.priority)}>{j.priority}</Chip>}
+        <div className="flex flex-col items-end gap-1">
+          {j.label && <Chip tone="dark">{j.label}</Chip>}
+          {j.priority !== 'normal' && <Chip tone={prioTone(j.priority)}>{j.priority}</Chip>}
+        </div>
       </div>
       {!compact && <div className="mt-2"><Chip>{statusLabel(j.status)}</Chip></div>}
       {isAdmin && compact && (

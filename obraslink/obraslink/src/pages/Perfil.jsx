@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Header, Card, Button, Chip, Loading, Field, Input } from '../components/UI'
+import { Header, Card, Button, Chip, Loading, Field, Input, Banner } from '../components/UI'
 import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtDate, fmtTime, audit } from '../lib/helpers'
 
 const ROLES = { admin: 'Administrador', encargado: 'Encargado', empleado: 'Empleado' }
@@ -11,6 +11,8 @@ export default function Perfil() {
   const [month, setMonth] = useState(monthValue())
   const [entries, setEntries] = useState(null)
   const [name, setName] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [pinMsg, setPinMsg] = useState(null)
 
   useEffect(() => { if (profile) setName(profile.full_name ?? '') }, [profile])
 
@@ -37,6 +39,16 @@ export default function Perfil() {
       await supabase.from('profiles').update({ full_name: name.trim() }).eq('id', user.id)
       refreshProfile()
     }
+  }
+
+  async function changePin(e) {
+    e.preventDefault()
+    setPinMsg(null)
+    if (!/^\d{4}$/.test(newPin)) return setPinMsg({ tone: 'danger', text: 'El PIN debe ser de 4 números.' })
+    const { error } = await supabase.auth.updateUser({ password: newPin })
+    if (error) return setPinMsg({ tone: 'danger', text: 'No se pudo cambiar el PIN: ' + error.message })
+    setNewPin('')
+    setPinMsg({ tone: 'ok', text: 'PIN cambiado. Úsalo la próxima vez que entres.' })
   }
 
   if (entries === null) return <Loading />
@@ -75,6 +87,18 @@ export default function Perfil() {
               </div>
             </div>
           ))}
+        </Card>
+
+        <Card>
+          <h3 className="font-extrabold mb-3">Cambiar PIN</h3>
+          <form onSubmit={changePin}>
+            <Field label="Nuevo PIN (4 números)">
+              <Input type="tel" maxLength="4" autoComplete="off" value={newPin} placeholder="0000"
+                onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} />
+            </Field>
+            {pinMsg && <div className="mb-4"><Banner tone={pinMsg.tone}>{pinMsg.text}</Banner></div>}
+            <Button type="submit" variant="ghost" disabled={newPin.length !== 4}>Guardar nuevo PIN</Button>
+          </form>
         </Card>
 
         <Button variant="ghost" onClick={signOut}>Cerrar sesión</Button>

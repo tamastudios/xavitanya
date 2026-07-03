@@ -17,14 +17,6 @@ export default function Login() {
     setBusy(false)
   }
 
-  async function recover() {
-    if (!email.trim()) return setMsg({ tone: 'warn', text: 'Escribe tu email arriba y vuelve a pulsar "He olvidado mi contraseña".' })
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
-    setMsg(error
-      ? { tone: 'danger', text: 'No se pudo enviar el email de recuperación.' }
-      : { tone: 'ok', text: 'Te hemos enviado un email para cambiar la contraseña.' })
-  }
-
   return (
     <div className="min-h-dvh flex flex-col justify-center max-w-lg mx-auto px-6">
       <div className="franjas h-2 rounded-full mb-8" />
@@ -49,7 +41,7 @@ export default function Login() {
       </form>
 
       <p className="text-humo text-[13px] mt-8">
-        ¿No tienes cuenta? Pide al administrador que te dé de alta.
+        ¿No tienes cuenta o has olvidado tu PIN? Pide al administrador que te ayude.
       </p>
     </div>
   )

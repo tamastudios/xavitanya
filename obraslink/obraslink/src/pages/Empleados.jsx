@@ -43,7 +43,7 @@ export default function Empleados() {
                 </Select>
               </label>
               <label className="block">
-                <span className="text-[13px] font-bold text-humo">Tarifa €/hora</span>
+                <span className="text-[13px] font-bold text-humo">Tarifa €/hora (sin IVA)</span>
                 <Input type="number" inputMode="decimal" step="0.5" defaultValue={p.hourly_rate ?? 0}
                   onBlur={e => Number(e.target.value) !== Number(p.hourly_rate) && update(p.id, { hourly_rate: Number(e.target.value) || 0 }, 'cambiar_tarifa')} />
               </label>

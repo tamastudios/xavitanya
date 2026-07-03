@@ -101,6 +101,9 @@ export default function Fichar() {
 
         {!entry && (
           <>
+            {jobs.length === 0 && (
+              <Banner tone="warn">No tienes ninguna obra asignada. Puedes fichar igualmente, pero pide al administrador que te asigne a tu obra para que las horas queden bien repartidas.</Banner>
+            )}
             <Card>
               <Field label="¿En qué obra vas a trabajar?">
                 <Select value={jobId} onChange={(e) => setJobId(e.target.value)}>

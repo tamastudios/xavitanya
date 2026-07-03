@@ -62,15 +62,18 @@ function Movimiento({ material, type, onClose, onDone, userId }) {
 
 function NuevoMaterial({ open, onClose, onDone }) {
   const [f, setF] = useState({ name: '', category: 'general', unit: 'unidad', stock: '0', min_stock: '0', price: '' })
+  const [err, setErr] = useState(null)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   async function save(e) {
     e.preventDefault()
+    setErr(null)
     const { error } = await supabase.from('materials').insert({
       name: f.name.trim(), category: f.category, unit: f.unit,
       stock: Number(f.stock) || 0, min_stock: Number(f.min_stock) || 0,
       location: 'Almacén', price: f.price ? Number(f.price) : 0,
     })
-    if (!error) { onDone(); onClose() }
+    if (error) return setErr('No se pudo guardar: ' + error.message)
+    onDone(); onClose()
   }
   return (
     <Modal open={open} onClose={onClose} title="Nuevo material">
@@ -85,6 +88,7 @@ function NuevoMaterial({ open, onClose, onDone }) {
           <Field label="Stock mínimo"><Input type="number" inputMode="decimal" value={f.min_stock} onChange={set('min_stock')} /></Field>
         </div>
         <Field label="Precio aprox. (€)"><Input type="number" inputMode="decimal" step="0.01" value={f.price} onChange={set('price')} /></Field>
+        {err && <div className="mb-4"><Banner tone="danger">{err}</Banner></div>}
         <Button type="submit">Guardar material</Button>
       </form>
     </Modal>

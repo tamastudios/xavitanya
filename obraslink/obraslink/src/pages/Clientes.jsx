@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Header, Card, Button, Empty, Loading, Modal, Field, Input, TextArea } from '../components/UI'
+import { Header, Card, Button, Empty, Loading, Modal, Field, Input, TextArea, Banner } from '../components/UI'
 import { audit } from '../lib/helpers'
 
 export default function Clientes() {
   const [clients, setClients] = useState(null)
   const [show, setShow] = useState(false)
+  const [err, setErr] = useState(null)
   const [f, setF] = useState({ name: '', nif: '', phone: '', email: '', address: '', contact_person: '', notes: '' })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
@@ -14,16 +15,16 @@ export default function Clientes() {
 
   async function save(e) {
     e.preventDefault()
+    setErr(null)
     const { data, error } = await supabase.from('clients').insert({
       name: f.name.trim(), nif: f.nif.trim() || null, phone: f.phone.trim() || null,
       email: f.email.trim() || null, address: f.address.trim() || null,
       contact_person: f.contact_person.trim() || null, notes: f.notes.trim() || null,
     }).select().single()
-    if (!error) {
-      await audit('crear_cliente', 'clients', data.id, { name: f.name })
-      setShow(false); setF({ name: '', nif: '', phone: '', email: '', address: '', contact_person: '', notes: '' })
-      load()
-    }
+    if (error) return setErr('No se pudo guardar el cliente: ' + error.message)
+    await audit('crear_cliente', 'clients', data.id, { name: f.name })
+    setShow(false); setF({ name: '', nif: '', phone: '', email: '', address: '', contact_person: '', notes: '' })
+    load()
   }
 
   if (clients === null) return <Loading />
@@ -64,6 +65,7 @@ export default function Clientes() {
           <Field label="Dirección"><Input value={f.address} onChange={set('address')} /></Field>
           <Field label="Persona de contacto"><Input value={f.contact_person} onChange={set('contact_person')} /></Field>
           <Field label="Notas privadas"><TextArea value={f.notes} onChange={set('notes')} className="min-h-[80px]" /></Field>
+          {err && <div className="mb-4"><Banner tone="danger">{err}</Banner></div>}
           <Button type="submit">Guardar cliente</Button>
         </form>
       </Modal>
