@@ -113,22 +113,22 @@ export default function Almacen() {
         <Input placeholder="Buscar material…" value={q} onChange={e => setQ(e.target.value)} />
         {list.length === 0 && <Empty>No hay materiales que coincidan.</Empty>}
         {list.map(m => (
-            <Card key={m.id}>
-              <div className="flex justify-between items-start gap-2">
-                <div>
-                  <p className="font-extrabold text-[16px]">{m.name}</p>
-                  <p className="text-humo text-[13px]">{m.category}</p>
-                </div>
-                <p className="font-bold text-[15px]">{Number(m.stock)} {m.unit}</p>
+          <Card key={m.id}>
+            <div className="flex justify-between items-start gap-2">
+              <div>
+                <p className="font-extrabold text-[16px]">{m.name}</p>
+                <p className="text-humo text-[13px]">{m.category}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <Button variant="ambar" className="min-h-[48px] text-[15px]"
-                  onClick={() => setMove({ material: m, type: 'salida' })}>Coger para obra</Button>
-                <Button variant="ghost" className="min-h-[48px] text-[15px]"
-                  onClick={() => setMove({ material: m, type: 'devolucion' })}>Devolver</Button>
-              </div>
-            </Card>
-        )}
+              <p className="font-bold text-[15px]">{Number(m.stock)} {m.unit}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <Button variant="ambar" className="min-h-[48px] text-[15px]"
+                onClick={() => setMove({ material: m, type: 'salida' })}>Coger para obra</Button>
+              <Button variant="ghost" className="min-h-[48px] text-[15px]"
+                onClick={() => setMove({ material: m, type: 'devolucion' })}>Devolver</Button>
+            </div>
+          </Card>
+        ))}
       </div>
 
       {move && <Movimiento material={move.material} type={move.type} userId={user.id}
