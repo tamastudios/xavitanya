@@ -300,7 +300,7 @@ export default function ObraDetalle() {
         <Card>
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-extrabold">Materiales en obra</h3>
-            {isAdmin && <Button variant="ambar" className="!w-auto !min-h-[40px] px-3 text-[13px]" onClick={() => setShowAddMaterial(true)}>+ Coger</Button>}
+            <Button variant="ambar" className="!w-auto !min-h-[40px] px-3 text-[13px]" onClick={() => setShowAddMaterial(true)}>+ Coger</Button>
           </div>
           {materialsInJob.map(m => (
             <div key={m.material_id} className="py-3 border-t border-linea first:border-0">
@@ -309,11 +309,9 @@ export default function ObraDetalle() {
                   <p className="font-semibold">{m.materials?.name}</p>
                   <p className="text-[13px] text-humo">{m.totalQty} {m.materials?.unit} en obra</p>
                 </div>
-                {isAdmin && (
-                  <button onClick={() => setRemovingMaterialId(m.material_id)} className="text-[13px] font-bold text-senal hover:underline">
-                    Devolver
-                  </button>
-                )}
+                <button onClick={() => setRemovingMaterialId(m.material_id)} className="text-[13px] font-bold text-senal hover:underline">
+                  Devolver
+                </button>
               </div>
             </div>
           ))}
