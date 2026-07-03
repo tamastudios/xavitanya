@@ -20,7 +20,7 @@ class ErrorBoundary extends React.Component {
           <p style={{ color: '#6b7280', marginTop: 8 }}>Recarga la app para seguir trabajando. Si vuelve a pasar, avisa al administrador.</p>
           <button
             onClick={() => window.location.reload()}
-            style={{ marginTop: 24, background: '#1F2421', color: '#fff', border: 0, borderRadius: 14, padding: '16px 28px', fontSize: 17, fontWeight: 700 }}>
+            style={{ marginTop: 24, background: '#16274D', color: '#fff', border: 0, borderRadius: 14, padding: '16px 28px', fontSize: 17, fontWeight: 700 }}>
             Recargar
           </button>
         </div>
