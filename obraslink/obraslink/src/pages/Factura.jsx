@@ -62,6 +62,16 @@ export default function Factura() {
     setMsg({ tone: 'ok', text: send ? 'Parte mensual enviado al jefe.' : 'Borrador guardado.' })
   }
 
+  async function deleteInvoice() {
+    if (!confirm(`¿Eliminar tu parte mensual de ${monthLabel(month)}? Podrás volver a crearlo cuando quieras.`)) return
+    setMsg(null)
+    const { error } = await supabase.from('invoices').delete().eq('id', invoice.id)
+    if (error) return setMsg({ tone: 'danger', text: 'No se pudo eliminar: ' + error.message })
+    await audit('eliminar_factura', 'invoices', invoice.id, { month })
+    setInvoice(null)
+    setMsg({ tone: 'ok', text: 'Parte mensual eliminado.' })
+  }
+
   async function downloadPDF() {
     const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
@@ -163,6 +173,17 @@ export default function Factura() {
           <Button variant="ok" onClick={() => saveDraft(true)} disabled={lines.length === 0}>Enviar al jefe</Button>
         </div>
         <Button variant="ambar" onClick={downloadPDF} disabled={lines.length === 0}>Descargar PDF</Button>
+        {invoice && invoice.status !== 'aprobado' && invoice.status !== 'exportado' && (
+          <button onClick={deleteInvoice}
+            className="w-full px-3 py-3 text-[14px] font-bold text-senal hover:bg-senal/10 rounded-lg">
+            Eliminar este parte mensual
+          </button>
+        )}
+        {invoice && (invoice.status === 'aprobado' || invoice.status === 'exportado') && (
+          <p className="text-humo text-[13px] text-center">
+            Este parte ya está aprobado: solo el administrador puede eliminarlo (desde Informes).
+          </p>
+        )}
         <p className="text-humo text-[13px] text-center pb-2">
           Esto es un borrador o parte facturable, no una factura legal certificada.
         </p>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Header, Card, Chip, Loading, Field, Input, Select, Button, Modal, Banner } from '../components/UI'
-import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtEUR, fmtDate, audit, startOfWeek, toDateStr } from '../lib/helpers'
+import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtEUR, fmtDate, audit, startOfWeek, toDateStr, signedUrl } from '../lib/helpers'
 
 export default function Informes() {
   const [month, setMonth] = useState(monthValue())
@@ -12,26 +12,45 @@ export default function Informes() {
   const [showManual, setShowManual] = useState(false)
   const [manual, setManual] = useState({ userId: '', jobId: '', date: '', hours: '' })
   const [manualMsg, setManualMsg] = useState(null)
+  const [openReport, setOpenReport] = useState(null)
+  const [reportPhotos, setReportPhotos] = useState([])
 
   async function load() {
     setData(null)
     const { from, to } = monthRange(month)
-    const [{ data: entries }, { data: reports }, { data: invoices }, { data: emps }, { data: jobs }] = await Promise.all([
+    // Límites del mes para columnas de tipo fecha (report_date)
+    const [yy, mm] = month.split('-').map(Number)
+    const monthStart = `${month}-01`
+    const monthEnd = `${mm === 12 ? yy + 1 : yy}-${String(mm === 12 ? 1 : mm + 1).padStart(2, '0')}-01`
+    const [{ data: entries }, { data: reports }, { data: allReports }, { data: invoices }, { data: emps }, { data: jobs }] = await Promise.all([
       supabase.from('time_entries')
         .select('user_id, job_id, clock_in, clock_out, break_minutes, profiles(full_name), jobs(name, clients(name))')
         .gte('clock_in', from).lt('clock_in', to).not('clock_out', 'is', null),
       supabase.from('daily_reports')
         .select('id, report_date, work_done, status, profiles!daily_reports_user_id_fkey(full_name), jobs(name)')
         .eq('status', 'pendiente').order('report_date', { ascending: false }),
+      supabase.from('daily_reports')
+        .select('id, user_id, report_date, work_done, incidents, status, profiles!daily_reports_user_id_fkey(full_name), jobs(name)')
+        .gte('report_date', monthStart).lt('report_date', monthEnd)
+        .order('report_date', { ascending: false }),
       supabase.from('invoices').select('*, profiles(full_name)').eq('month', month).order('created_at'),
       supabase.from('profiles').select('id, full_name').eq('active', true).order('full_name'),
       supabase.from('jobs').select('id, name').order('name'),
     ])
-    setData({ entries: entries ?? [], reports: reports ?? [], invoices: invoices ?? [] })
+    setData({ entries: entries ?? [], reports: reports ?? [], allReports: allReports ?? [], invoices: invoices ?? [] })
     setEmployees(emps ?? [])
     setJobsList(jobs ?? [])
   }
   useEffect(() => { load() }, [month])
+
+  // Abrir un parte diario completo (con sus fotos)
+  async function showReport(r) {
+    setOpenReport(r)
+    setReportPhotos([])
+    const { data: media } = await supabase.from('report_media').select('path').eq('report_id', r.id)
+    const urls = await Promise.all((media ?? []).map(m => signedUrl(m.path)))
+    setReportPhotos(urls.filter(Boolean))
+  }
 
   if (!data) return <Loading />
 
@@ -100,11 +119,19 @@ export default function Informes() {
   async function reviewReport(id, status) {
     await supabase.from('daily_reports').update({ status }).eq('id', id)
     await audit(status === 'aprobado' ? 'aprobar_parte' : 'rechazar_parte', 'daily_reports', id)
+    setOpenReport(null)
     load()
   }
   async function approveInvoice(id) {
     await supabase.from('invoices').update({ status: 'aprobado' }).eq('id', id)
     await audit('aprobar_factura', 'invoices', id)
+    load()
+  }
+  async function deleteInvoice(inv) {
+    if (!confirm(`¿Eliminar el parte mensual de ${inv.profiles?.full_name ?? 'este autónomo'} de ${monthLabel(month)}? No se puede deshacer.`)) return
+    const { error } = await supabase.from('invoices').delete().eq('id', inv.id)
+    if (error) return alert('No se pudo eliminar: ' + error.message + '\n\n¿Has ejecutado migracion_mejoras_2.sql en Supabase?')
+    await audit('eliminar_factura', 'invoices', inv.id, { month, de: inv.profiles?.full_name })
     load()
   }
 
@@ -174,6 +201,28 @@ export default function Informes() {
           </Card>
         ))}
 
+        <h3 className="font-extrabold text-[18px] mt-2">Todos los partes de {monthLabel(month)}</h3>
+        {(() => {
+          const list = data.allReports.filter(r => !selectedEmp || r.profiles?.full_name === selectedEmp)
+          if (list.length === 0) return <Card><p className="text-humo">No hay partes diarios este mes.</p></Card>
+          return (
+            <Card>
+              {list.map(r => (
+                <button key={r.id} onClick={() => showReport(r)}
+                  className="w-full text-left py-2.5 border-t border-linea first:border-0 active:bg-hormigon">
+                  <div className="flex justify-between items-center gap-2">
+                    <p className="font-bold text-[15px] min-w-0 truncate">
+                      {fmtDate(r.report_date)} · {r.profiles?.full_name}
+                    </p>
+                    <Chip tone={r.status === 'aprobado' ? 'ok' : r.status === 'rechazado' ? 'danger' : 'warn'}>{r.status}</Chip>
+                  </div>
+                  <p className="text-humo text-[14px] mt-0.5 line-clamp-1">{r.jobs?.name ?? 'Sin obra'} · {r.work_done}</p>
+                </button>
+              ))}
+            </Card>
+          )
+        })()}
+
         <h3 className="font-extrabold text-[18px] mt-2">Partes mensuales de autónomos</h3>
         {data.invoices.length === 0 && <Card><p className="text-humo">Ningún autónomo ha generado su parte de {monthLabel(month)}.</p></Card>}
         {data.invoices.map(inv => (
@@ -186,9 +235,44 @@ export default function Informes() {
             {inv.status === 'enviado' && (
               <Button variant="ok" className="min-h-[44px] text-[15px] mt-3" onClick={() => approveInvoice(inv.id)}>Aprobar parte mensual</Button>
             )}
+            <button onClick={() => deleteInvoice(inv)}
+              className="mt-3 w-full px-3 py-2 text-[14px] font-bold text-senal hover:bg-senal/10 rounded-lg">
+              Eliminar parte mensual
+            </button>
           </Card>
         ))}
       </div>
+
+      {openReport && (
+        <Modal open onClose={() => setOpenReport(null)}
+          title={`Parte · ${fmtDate(openReport.report_date)}`}>
+          <p className="font-extrabold text-[16px]">{openReport.profiles?.full_name}</p>
+          <p className="text-humo text-[14px] mb-3">{openReport.jobs?.name ?? 'Sin obra'} · Estado: {openReport.status}</p>
+          <p className="text-[13px] font-bold uppercase tracking-wide text-humo mb-1">Trabajo realizado</p>
+          <p className="text-[15px] whitespace-pre-wrap mb-3">{openReport.work_done}</p>
+          {openReport.incidents && (
+            <>
+              <p className="text-[13px] font-bold uppercase tracking-wide text-humo mb-1">Incidencias</p>
+              <p className="text-[15px] whitespace-pre-wrap mb-3">{openReport.incidents}</p>
+            </>
+          )}
+          {reportPhotos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {reportPhotos.map((u, i) => (
+                <a key={i} href={u} target="_blank" rel="noreferrer">
+                  <img src={u} alt={`Foto ${i + 1}`} className="w-full aspect-square object-cover rounded-xl border border-linea" />
+                </a>
+              ))}
+            </div>
+          )}
+          {openReport.status === 'pendiente' && (
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="ok" className="min-h-[44px] text-[15px]" onClick={() => reviewReport(openReport.id, 'aprobado')}>Aprobar</Button>
+              <Button variant="ghost" className="min-h-[44px] text-[15px]" onClick={() => reviewReport(openReport.id, 'rechazado')}>Rechazar</Button>
+            </div>
+          )}
+        </Modal>
+      )}
 
       {showManual && (
         <Modal open onClose={() => { setShowManual(false); setManualMsg(null) }} title="Añadir horas manualmente">

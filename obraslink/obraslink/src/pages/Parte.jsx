@@ -21,9 +21,13 @@ export default function Parte() {
   const [msg, setMsg] = useState(null)
 
   // ---------- Dictado por voz ----------
+  // En iPhone/iPad el reconocimiento de voz web no funciona bien dentro de
+  // apps instaladas (se queda colgado). Ahí usamos el micrófono del teclado.
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   const recRef = useRef(null)
   const [listening, setListening] = useState(false)
-  const voiceSupported = typeof window !== 'undefined' &&
+  const voiceSupported = !isIOS && typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
 
   function toggleVoice() {
@@ -129,6 +133,11 @@ export default function Parte() {
             <TextArea value={workDone} onChange={e => setWorkDone(e.target.value)}
               placeholder="Ej: Alicatado de la pared del baño, colocados 12 m². Preparado el suelo para mañana." />
           </Field>
+          {isIOS && (
+            <div className="mb-4 -mt-2 rounded-xl bg-hormigon border border-linea px-4 py-3 text-[14px] text-humo font-semibold">
+              💡 Para dictar con la voz: toca el cuadro de arriba y pulsa el micrófono 🎤 del teclado del iPhone. Habla y el texto se escribe solo.
+            </div>
+          )}
           {voiceSupported && (
             <div className="mb-4 -mt-2">
               <button type="button" onClick={toggleVoice}
