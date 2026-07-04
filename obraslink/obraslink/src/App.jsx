@@ -1,7 +1,10 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import BottomNav from './components/BottomNav'
+import OfflineBanner from './components/OfflineBanner'
 import { Loading, Banner } from './components/UI'
+import { initOfflineSync } from './lib/offline'
 import Login from './pages/Login'
 import Hoy from './pages/Hoy'
 import Fichar from './pages/Fichar'
@@ -14,10 +17,13 @@ import Informes from './pages/Informes'
 import Factura from './pages/Factura'
 import Empleados from './pages/Empleados'
 import Perfil from './pages/Perfil'
+import Auditoria from './pages/Auditoria'
+import Cuadrante from './pages/Cuadrante'
 
 function Layout({ children }) {
   return (
     <div className="max-w-lg mx-auto min-h-dvh pb-28">
+      <OfflineBanner />
       {children}
       <BottomNav />
     </div>
@@ -55,12 +61,16 @@ function Router() {
       <Route path="/clientes" element={<Protected adminOnly><Clientes /></Protected>} />
       <Route path="/informes" element={<Protected adminOnly><Informes /></Protected>} />
       <Route path="/empleados" element={<Protected adminOnly><Empleados /></Protected>} />
+      <Route path="/auditoria" element={<Protected adminOnly><Auditoria /></Protected>} />
+      <Route path="/cuadrante" element={<Protected adminOnly><Cuadrante /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
 
 export default function App() {
+  // Arrancar la subida automática de registros guardados sin conexión
+  useEffect(() => { initOfflineSync() }, [])
   return (
     <AuthProvider>
       <BrowserRouter>

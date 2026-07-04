@@ -71,6 +71,60 @@ export const entryHours = (e) => {
   return Math.max(0, ms / 3600000 - (e.break_minutes ?? 0) / 60)
 }
 
+// ---------- Semanas (cuadrante) ----------
+export const toDateStr = (d) => {
+  const x = new Date(d)
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+}
+export const startOfWeek = (d = new Date()) => {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  const day = (x.getDay() + 6) % 7 // lunes = 0
+  x.setDate(x.getDate() - day)
+  return x
+}
+export const weekDays = (monday) =>
+  Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(d.getDate() + i)
+    return d
+  })
+
+// ---------- Incidencias ----------
+export const INCIDENT_KINDS = [
+  { id: 'falta_material', label: 'Falta material' },
+  { id: 'averia', label: 'Algo roto / avería' },
+  { id: 'accidente', label: 'Accidente leve' },
+  { id: 'otro', label: 'Otro problema' },
+]
+export const incidentLabel = (id) => INCIDENT_KINDS.find(k => k.id === id)?.label ?? id
+
+// ---------- Etiquetas legibles para la auditoría ----------
+export const AUDIT_LABELS = {
+  fichar_entrada: 'Fichó entrada',
+  fichar_salida: 'Fichó salida',
+  cambiar_de_obra: 'Cambió de obra',
+  crear_parte: 'Creó un parte diario',
+  aprobar_parte: 'Aprobó un parte',
+  rechazar_parte: 'Rechazó un parte',
+  crear_obra: 'Creó una obra',
+  duplicar_obra: 'Duplicó una obra',
+  eliminar_obra: 'Eliminó una obra',
+  cambiar_estado_obra: 'Cambió el estado de una obra',
+  editar_etiqueta_obra: 'Editó la etiqueta de una obra',
+  asignar_empleado: 'Asignó a alguien a una obra',
+  asignar_herramienta: 'Asignó una herramienta',
+  coger_material_obra: 'Cogió material para una obra',
+  devolver_material_obra: 'Devolvió material',
+  anadir_horas_manual: 'Añadió horas a mano',
+  borrar_fichaje: 'Borró un fichaje',
+  aprobar_factura: 'Aprobó un parte mensual',
+  crear_incidencia: 'Avisó de un problema',
+  resolver_incidencia: 'Marcó un problema como resuelto',
+  planificar_cuadrante: 'Planificó el cuadrante',
+}
+export const auditLabel = (a) => AUDIT_LABELS[a] ?? a?.replaceAll('_', ' ') ?? a
+
 // ---------- Auditoría ----------
 export async function audit(action, table_name, record_id, details = {}) {
   const { data: { user } } = await supabase.auth.getUser()

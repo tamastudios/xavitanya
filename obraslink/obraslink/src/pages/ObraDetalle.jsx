@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Header, Card, Button, Chip, Loading, Field, Select, Input, Modal } from '../components/UI'
+import { Header, Card, Button, Chip, Loading, Field, Select, Input, Modal, Banner } from '../components/UI'
 import { statusLabel, fmtDate, fmtEUR, fmtHours, entryHours, signedUrl, MOVEMENT_LABELS, TOOLS, JOB_STATUSES, audit } from '../lib/helpers'
+import { getForecast, weatherEmoji, weatherLabel, dayName } from '../lib/weather'
 
 export default function ObraDetalle() {
   const { id } = useParams()
+  const nav = useNavigate()
   const { user, isAdmin, isStaff } = useAuth()
   const [job, setJob] = useState(null)
+  const [forecast, setForecast] = useState(null)
+  const [duplicating, setDuplicating] = useState(false)
   const [assigned, setAssigned] = useState([])
   const [people, setPeople] = useState([])
   const [moves, setMoves] = useState([])
@@ -85,6 +89,41 @@ export default function ObraDetalle() {
     setMaterialsInJob(Object.values(grouped))
   }
   useEffect(() => { load() }, [id])
+
+  // Previsión del tiempo según la dirección de la obra
+  useEffect(() => {
+    if (job?.address) getForecast(job.address).then(setForecast)
+    else setForecast(null)
+  }, [job?.address])
+
+  // Duplicar obra como plantilla (copia datos y herramientas, no fichajes ni partes)
+  async function duplicateJob() {
+    if (!confirm(`¿Duplicar «${job.name}»? Se copiarán los datos y las herramientas, pero no los fichajes ni los partes.`)) return
+    setDuplicating(true)
+    const { data: copy, error } = await supabase.from('jobs').insert({
+      name: `${job.name} (copia)`,
+      client_id: job.client_id,
+      address: job.address,
+      maps_url: job.maps_url,
+      description: job.description,
+      budget: job.budget,
+      priority: job.priority,
+      label: job.label,
+      notes: job.notes,
+      status: 'en_preparacion',
+    }).select().single()
+    if (error) {
+      alert('No se pudo duplicar la obra: ' + error.message)
+      setDuplicating(false)
+      return
+    }
+    if (tools.length > 0) {
+      await supabase.from('job_tools').insert(tools.map(t => ({ job_id: copy.id, tool_name: t.tool_name })))
+    }
+    await audit('duplicar_obra', 'jobs', copy.id, { original: job.name })
+    setDuplicating(false)
+    nav(`/obras/${copy.id}`)
+  }
 
   async function saveLabel() {
     await supabase.from('jobs').update({ label: label.trim() || null }).eq('id', id)
@@ -221,6 +260,31 @@ export default function ObraDetalle() {
           </div>
         </Card>
 
+        {/* Previsión del tiempo en la obra */}
+        {forecast && (
+          <Card>
+            <h3 className="font-extrabold mb-2">El tiempo en la obra</h3>
+            {forecast.some(d => d.rain >= 50) && (
+              <div className="mb-3">
+                <Banner tone="warn">
+                  🌧️ Se espera lluvia {forecast.findIndex(d => d.rain >= 50) === 0 ? 'hoy' : forecast.findIndex(d => d.rain >= 50) === 1 ? 'mañana' : 'pasado mañana'} ({forecast.find(d => d.rain >= 50).rain}% de probabilidad). Si el trabajo es exterior, replanifica.
+                </Banner>
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {forecast.map((d, i) => (
+                <div key={d.date} className={`rounded-xl p-3 ${d.rain >= 50 ? 'bg-[#fdf3d7]' : 'bg-hormigon'}`}>
+                  <p className="text-[13px] font-bold capitalize text-humo">{dayName(d.date, i)}</p>
+                  <p className="text-[26px] leading-tight mt-1">{weatherEmoji(d.code)}</p>
+                  <p className="text-[13px] font-semibold mt-1">{weatherLabel(d.code)}</p>
+                  <p className="text-[13px] text-humo">{d.tmin}º / {d.tmax}º</p>
+                  <p className={`text-[12px] font-bold ${d.rain >= 50 ? 'text-ambar-oscuro' : 'text-humo'}`}>💧 {d.rain}%</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {isAdmin && (
           <Card>
             <h3 className="font-extrabold mb-3">Gestión de la obra</h3>
@@ -237,6 +301,9 @@ export default function ObraDetalle() {
                 {JOB_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
               </Select>
             </Field>
+            <Button variant="ghost" onClick={duplicateJob} disabled={duplicating}>
+              {duplicating ? 'Duplicando…' : '📋 Duplicar obra como plantilla'}
+            </Button>
           </Card>
         )}
 

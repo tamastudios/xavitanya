@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Header, Card, Chip, Loading, Field, Input, Select, Button, Modal, Banner } from '../components/UI'
-import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtEUR, fmtDate, audit } from '../lib/helpers'
+import { monthValue, monthLabel, monthRange, entryHours, fmtHours, fmtEUR, fmtDate, audit, startOfWeek, toDateStr } from '../lib/helpers'
 
 export default function Informes() {
   const [month, setMonth] = useState(monthValue())
@@ -38,16 +38,26 @@ export default function Informes() {
   // Agregados - inicializar con TODOS los empleados (aunque no hayan fichado)
   const byEmployee = {}
   for (const emp of employees) {
-    byEmployee[emp.full_name] = { total: 0, jobs: {} }
+    byEmployee[emp.full_name] = { total: 0, jobs: {}, days: {}, weeks: {} }
   }
   for (const e of data.entries) {
     const emp = e.profiles?.full_name ?? 'Desconocido'
     const job = e.jobs ? `${e.jobs.name}${e.jobs.clients?.name ? ` · ${e.jobs.clients.name}` : ''}` : 'Sin obra'
-    byEmployee[emp] ??= { total: 0, jobs: {} }
+    byEmployee[emp] ??= { total: 0, jobs: {}, days: {}, weeks: {} }
     const h = entryHours(e)
     byEmployee[emp].total += h
     byEmployee[emp].jobs[job] = (byEmployee[emp].jobs[job] ?? 0) + h
+    // Para detectar horas extra: acumular por día y por semana
+    const day = toDateStr(e.clock_in)
+    const week = toDateStr(startOfWeek(new Date(e.clock_in)))
+    byEmployee[emp].days[day] = (byEmployee[emp].days[day] ?? 0) + h
+    byEmployee[emp].weeks[week] = (byEmployee[emp].weeks[week] ?? 0) + h
   }
+  // Horas extra: días de más de 8 h o semanas de más de 40 h
+  const overtime = (d) => ({
+    longDays: Object.entries(d.days ?? {}).filter(([, h]) => h > 8),
+    longWeeks: Object.entries(d.weeks ?? {}).filter(([, h]) => h > 40),
+  })
 
   async function saveManualHours() {
     setManualMsg(null)
@@ -121,12 +131,24 @@ export default function Informes() {
           <Button variant="ambar" className="!w-auto !min-h-[40px] px-3 text-[13px]" onClick={() => setShowManual(true)}>+ Añadir horas</Button>
         </div>
         {filteredEmployees.length === 0 && <Card><p className="text-humo">No hay empleados.</p></Card>}
-        {filteredEmployees.map(([emp, d]) => (
+        {filteredEmployees.map(([emp, d]) => {
+          const ot = overtime(d)
+          return (
           <Card key={emp}>
             <div className="flex justify-between items-center">
               <p className="font-extrabold text-[17px]">{emp}</p>
-              <Chip tone="dark">{fmtHours(d.total)}</Chip>
+              <div className="flex items-center gap-2">
+                {(ot.longDays.length > 0 || ot.longWeeks.length > 0) && <Chip tone="warn">⚠ Horas extra</Chip>}
+                <Chip tone="dark">{fmtHours(d.total)}</Chip>
+              </div>
             </div>
+            {(ot.longDays.length > 0 || ot.longWeeks.length > 0) && (
+              <p className="text-ambar-oscuro text-[13px] font-semibold mt-1.5">
+                {ot.longDays.length > 0 && `${ot.longDays.length} día(s) con más de 8 h (${ot.longDays.map(([day, h]) => `${fmtDate(day)}: ${fmtHours(h)}`).join(', ')})`}
+                {ot.longDays.length > 0 && ot.longWeeks.length > 0 && ' · '}
+                {ot.longWeeks.length > 0 && `${ot.longWeeks.length} semana(s) con más de 40 h`}
+              </p>
+            )}
             <div className="mt-2">
               {Object.entries(d.jobs).map(([job, h]) => (
                 <div key={job} className="flex justify-between py-1.5 border-t border-linea text-[15px]">
@@ -136,7 +158,8 @@ export default function Informes() {
               ))}
             </div>
           </Card>
-        ))}
+          )
+        })}
 
         <h3 className="font-extrabold text-[18px] mt-2">Partes diarios por revisar ({data.reports.length})</h3>
         {data.reports.length === 0 && <Card><p className="text-humo">Todo revisado. Bien.</p></Card>}
