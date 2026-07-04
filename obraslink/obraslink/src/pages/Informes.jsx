@@ -27,7 +27,7 @@ export default function Informes() {
         .select('user_id, job_id, clock_in, clock_out, break_minutes, profiles(full_name), jobs(name, clients(name))')
         .gte('clock_in', from).lt('clock_in', to).not('clock_out', 'is', null),
       supabase.from('daily_reports')
-        .select('id, report_date, work_done, status, profiles!daily_reports_user_id_fkey(full_name), jobs(name)')
+        .select('id, report_date, work_done, incidents, status, profiles!daily_reports_user_id_fkey(full_name), jobs(name)')
         .eq('status', 'pendiente').order('report_date', { ascending: false }),
       supabase.from('daily_reports')
         .select('id, user_id, report_date, work_done, incidents, status, profiles!daily_reports_user_id_fkey(full_name), jobs(name)')
@@ -191,12 +191,13 @@ export default function Informes() {
         <h3 className="font-extrabold text-[18px] mt-2">Partes diarios por revisar ({data.reports.length})</h3>
         {data.reports.length === 0 && <Card><p className="text-humo">Todo revisado. Bien.</p></Card>}
         {data.reports.map(r => (
-          <Card key={r.id}>
+          <Card key={r.id} onClick={() => showReport(r)}>
             <p className="font-bold">{r.profiles?.full_name} · {r.jobs?.name ?? 'Sin obra'} · {fmtDate(r.report_date)}</p>
-            <p className="text-humo text-[15px] mt-1">{r.work_done}</p>
+            <p className="text-humo text-[15px] mt-1 line-clamp-3">{r.work_done}</p>
+            <p className="text-[13px] font-bold text-grafito underline underline-offset-2 mt-1">Toca para verlo completo con fotos</p>
             <div className="grid grid-cols-2 gap-3 mt-3">
-              <Button variant="ok" className="min-h-[44px] text-[15px]" onClick={() => reviewReport(r.id, 'aprobado')}>Aprobar</Button>
-              <Button variant="ghost" className="min-h-[44px] text-[15px]" onClick={() => reviewReport(r.id, 'rechazado')}>Rechazar</Button>
+              <Button variant="ok" className="min-h-[44px] text-[15px]" onClick={(e) => { e.stopPropagation(); reviewReport(r.id, 'aprobado') }}>Aprobar</Button>
+              <Button variant="ghost" className="min-h-[44px] text-[15px]" onClick={(e) => { e.stopPropagation(); reviewReport(r.id, 'rechazado') }}>Rechazar</Button>
             </div>
           </Card>
         ))}

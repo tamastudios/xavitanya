@@ -47,8 +47,14 @@ export default function Factura() {
   const iva = Math.round(base * 0.21 * 100) / 100
   const total = Math.round((base + iva) * 100) / 100
 
+  // Un parte aprobado o exportado ya no lo puede cambiar el trabajador
+  const locked = !!invoice && ['aprobado', 'exportado'].includes(invoice.status)
+
   async function saveDraft(send = false) {
     setMsg(null)
+    if (locked) {
+      return setMsg({ tone: 'warn', text: 'Este parte ya está aprobado y no se puede cambiar. Si hay que corregirlo, pide al administrador que lo elimine desde Informes y vuelve a enviarlo.' })
+    }
     const payload = {
       user_id: user.id, month, total_hours: totalHours, hourly_rate: r, total_amount: total,
       lines: lines.map(l => ({ ...l, amount: Math.round(l.hours * r * 100) / 100 })),
@@ -56,7 +62,12 @@ export default function Factura() {
     }
     const { data, error } = await supabase.from('invoices')
       .upsert(payload, { onConflict: 'user_id,month' }).select().single()
-    if (error) return setMsg({ tone: 'danger', text: error.message })
+    if (error) {
+      const friendly = /row-level security|violates|policy/i.test(error.message)
+        ? 'No tienes permiso para cambiar este parte (seguramente ya está aprobado). Pide al administrador que lo elimine desde Informes si hay que corregirlo.'
+        : error.message
+      return setMsg({ tone: 'danger', text: friendly })
+    }
     setInvoice(data)
     await audit(send ? 'enviar_factura' : 'guardar_factura', 'invoices', data.id, { month })
     setMsg({ tone: 'ok', text: send ? 'Parte mensual enviado al jefe.' : 'Borrador guardado.' })
@@ -169,9 +180,14 @@ export default function Factura() {
 
         {msg && <Banner tone={msg.tone}>{msg.text}</Banner>}
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="ghost" onClick={() => saveDraft(false)} disabled={lines.length === 0}>Guardar borrador</Button>
-          <Button variant="ok" onClick={() => saveDraft(true)} disabled={lines.length === 0}>Enviar al jefe</Button>
+          <Button variant="ghost" onClick={() => saveDraft(false)} disabled={lines.length === 0 || locked}>Guardar borrador</Button>
+          <Button variant="ok" onClick={() => saveDraft(true)} disabled={lines.length === 0 || locked}>Enviar al jefe</Button>
         </div>
+        {locked && (
+          <Banner tone="warn">
+            Este parte de {monthLabel(month)} ya está aprobado y queda bloqueado. Si hay que corregirlo, el administrador puede eliminarlo desde Informes y podrás enviarlo de nuevo.
+          </Banner>
+        )}
         <Button variant="ambar" onClick={downloadPDF} disabled={lines.length === 0}>Descargar PDF</Button>
         {invoice && invoice.status !== 'aprobado' && invoice.status !== 'exportado' && (
           <button onClick={deleteInvoice}
