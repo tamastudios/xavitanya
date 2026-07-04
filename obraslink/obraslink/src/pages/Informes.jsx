@@ -14,6 +14,7 @@ export default function Informes() {
   const [manualMsg, setManualMsg] = useState(null)
   const [openReport, setOpenReport] = useState(null)
   const [reportPhotos, setReportPhotos] = useState([])
+  const [showAllReports, setShowAllReports] = useState(false)
 
   async function load() {
     setData(null)
@@ -202,13 +203,14 @@ export default function Informes() {
           </Card>
         ))}
 
-        <h3 className="font-extrabold text-[18px] mt-2">Todos los partes de {monthLabel(month)}</h3>
+        <h3 className="font-extrabold text-[18px] mt-2">Partes diarios de {monthLabel(month)}</h3>
         {(() => {
           const list = data.allReports.filter(r => !selectedEmp || r.profiles?.full_name === selectedEmp)
           if (list.length === 0) return <Card><p className="text-humo">No hay partes diarios este mes.</p></Card>
+          const visible = showAllReports ? list : list.slice(0, 3)
           return (
             <Card>
-              {list.map(r => (
+              {visible.map(r => (
                 <button key={r.id} onClick={() => showReport(r)}
                   className="w-full text-left py-2.5 border-t border-linea first:border-0 active:bg-hormigon">
                   <div className="flex justify-between items-center gap-2">
@@ -220,6 +222,12 @@ export default function Informes() {
                   <p className="text-humo text-[14px] mt-0.5 line-clamp-1">{r.jobs?.name ?? 'Sin obra'} · {r.work_done}</p>
                 </button>
               ))}
+              {list.length > 3 && (
+                <button onClick={() => setShowAllReports(!showAllReports)}
+                  className="w-full mt-2 py-2.5 rounded-xl bg-hormigon text-[14px] font-bold text-grafito active:scale-[0.99]">
+                  {showAllReports ? 'Mostrar menos' : `Ver los ${list.length} partes del mes`}
+                </button>
+              )}
             </Card>
           )
         })()}
