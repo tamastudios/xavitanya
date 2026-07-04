@@ -56,7 +56,7 @@ export default function Perfil() {
 
   return (
     <div>
-      <Header title="Mi perfil" right={<Chip tone="dark">{ROLES[profile?.role] ?? ''}</Chip>} />
+      <Header title="Mi perfil" right={<Chip tone="claro">{ROLES[profile?.role] ?? ''}</Chip>} />
       <div className="px-5 space-y-4">
         <Card>
           <Field label="Tu nombre">

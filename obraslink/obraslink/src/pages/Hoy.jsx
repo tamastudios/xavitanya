@@ -63,24 +63,24 @@ function HoyEmpleado() {
         )}
 
         {today ? (
-          <Card>
+          <div className="cabecera text-white rounded-tarjeta shadow-flotante p-4 anim-aparecer">
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-humo text-[13px] font-bold uppercase tracking-wide">Tu obra de hoy</p>
-                <h2 className="text-[20px] font-extrabold mt-0.5">{today.name}</h2>
-                {today.address && <p className="text-humo mt-1">{today.address}</p>}
+              <div className="min-w-0">
+                <p className="text-ambar text-[13px] font-bold uppercase tracking-wide">Tu obra de hoy</p>
+                <h2 className="text-[21px] font-extrabold mt-0.5">{today.name}</h2>
+                {today.address && <p className="text-white/70 mt-1 text-[15px]">{today.address}</p>}
               </div>
-              <Chip tone="ok">{statusLabel(today.status)}</Chip>
+              <Chip tone="claro">{statusLabel(today.status)}</Chip>
             </div>
-            {today.description && <p className="mt-3 text-[15px]">{today.description}</p>}
+            {today.description && <p className="mt-3 text-[15px] text-white/85">{today.description}</p>}
             <div className="grid grid-cols-2 gap-3 mt-4">
               <Button variant="ghost" onClick={() =>
                 window.open(today.maps_url || `https://maps.google.com/?q=${encodeURIComponent(today.address ?? today.name)}`, '_blank')}>
                 Abrir en Maps
               </Button>
-              <Button variant="ghost" onClick={() => nav(`/obras/${today.id}`)}>Ver obra</Button>
+              <Button variant="ambar" onClick={() => nav(`/obras/${today.id}`)}>Ver obra</Button>
             </div>
-          </Card>
+          </div>
         ) : (
           <Card><Empty>No tienes obras asignadas. Habla con tu encargado.</Empty></Card>
         )}
@@ -132,7 +132,7 @@ function InicioAdmin() {
   return (
     <div>
       <Header title="Inicio" subtitle="Resumen de la empresa"
-        right={<Link to="/perfil" className="text-humo font-bold text-[15px] underline underline-offset-4">Perfil</Link>} />
+        right={<Link to="/perfil" className="text-white/85 font-bold text-[15px] underline underline-offset-4">Perfil</Link>} />
       <div className="px-5 space-y-4">
         <div className="grid grid-cols-3 gap-3">
           <Num n={stats.activas} label="Obras en proceso" to="/obras" />

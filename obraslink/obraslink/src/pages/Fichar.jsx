@@ -124,14 +124,14 @@ export default function Fichar() {
 
         {entry && (
           <>
-            <Card className="text-center py-8">
+            <div className="cabecera text-white rounded-tarjeta shadow-flotante text-center py-9 px-4 anim-aparecer">
               <div className="franjas h-1.5 rounded-full mb-6 mx-8" />
-              <p className="text-humo font-bold uppercase tracking-wide text-[13px]">
+              <p className={`font-bold uppercase tracking-wide text-[13px] ${paused ? 'text-ambar' : 'text-white/70'}`}>
                 {paused ? 'En pausa' : 'Trabajando'} · entrada {fmtTime(entry.clock_in)}
               </p>
-              <p className="text-[52px] font-extrabold tabular-nums leading-tight mt-1">{hhmmss(elapsed)}</p>
-              {entry.break_minutes > 0 && <p className="text-humo mt-1">{entry.break_minutes} min de pausa acumulados</p>}
-            </Card>
+              <p className="text-[56px] font-extrabold tabular-nums leading-tight mt-1">{hhmmss(elapsed)}</p>
+              {entry.break_minutes > 0 && <p className="text-white/60 mt-1 text-[14px]">{entry.break_minutes} min de pausa acumulados</p>}
+            </div>
 
             {!paused
               ? <Button variant="ghost" onClick={pause} disabled={busy}>Empezar pausa</Button>

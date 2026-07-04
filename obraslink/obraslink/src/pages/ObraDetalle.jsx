@@ -50,7 +50,7 @@ export default function ObraDetalle() {
     setMoves(mv ?? [])
 
     const { data: rp } = await supabase.from('daily_reports')
-      .select('id, report_date, work_done, status, profiles(full_name)')
+      .select('id, report_date, work_done, status, profiles!daily_reports_user_id_fkey(full_name)')
       .eq('job_id', id).order('report_date', { ascending: false }).limit(10)
     setReports(rp ?? [])
 
@@ -199,7 +199,7 @@ export default function ObraDetalle() {
 
   return (
     <div>
-      <Header title={job.name} subtitle={job.clients?.name} right={<Chip tone="dark">{statusLabel(job.status)}</Chip>} />
+      <Header title={job.name} subtitle={job.clients?.name} right={<Chip tone="claro">{statusLabel(job.status)}</Chip>} />
       <div className="px-5 space-y-4">
         <Card>
           {job.label && (

@@ -21,7 +21,7 @@ export default function Informes() {
         .select('user_id, job_id, clock_in, clock_out, break_minutes, profiles(full_name), jobs(name, clients(name))')
         .gte('clock_in', from).lt('clock_in', to).not('clock_out', 'is', null),
       supabase.from('daily_reports')
-        .select('id, report_date, work_done, status, profiles(full_name), jobs(name)')
+        .select('id, report_date, work_done, status, profiles!daily_reports_user_id_fkey(full_name), jobs(name)')
         .eq('status', 'pendiente').order('report_date', { ascending: false }),
       supabase.from('invoices').select('*, profiles(full_name)').eq('month', month).order('created_at'),
       supabase.from('profiles').select('id, full_name').eq('active', true).order('full_name'),

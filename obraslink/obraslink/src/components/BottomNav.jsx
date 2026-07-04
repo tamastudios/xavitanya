@@ -20,7 +20,7 @@ function Tab({ to, icon, label }) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex flex-col items-center justify-center gap-0.5 flex-1 py-2 ${isActive ? 'text-grafito' : 'text-humo'}`
+        `flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-colors ${isActive ? 'text-ambar' : 'text-white/45'}`
       }
     >
       {({ isActive }) => (
@@ -39,20 +39,20 @@ export default function BottomNav() {
   const ficharActive = pathname.startsWith('/fichar')
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-papel border-t border-linea safe-bottom">
+    <nav className="fixed bottom-0 inset-x-0 z-40 cabecera border-t border-white/10 safe-bottom shadow-[0_-8px_24px_rgb(22_39_77/0.25)]">
       <div className="max-w-lg mx-auto flex items-stretch relative">
         <Tab to="/" icon="hoy" label={isAdmin ? 'Inicio' : 'Hoy'} />
         <Tab to="/obras" icon="obras" label="Obras" />
 
         {/* Pulsador central de fichar */}
         <div className="flex-1 flex justify-center">
-          <NavLink to="/fichar" aria-label="Fichar" className="-mt-6">
-            <div className={`pulsador w-16 h-16 rounded-full flex items-center justify-center border-4 ${ficharActive ? 'bg-grafito border-grafito text-ambar' : 'bg-ambar border-papel text-grafito'}`}>
+          <NavLink to="/fichar" aria-label="Fichar" className="-mt-7">
+            <div className={`pulsador w-16 h-16 rounded-full flex items-center justify-center border-4 transition-colors ${ficharActive ? 'bg-white border-white text-grafito' : 'bg-ambar border-[#122142] text-grafito'}`}>
               <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
               </svg>
             </div>
-            <span className="block text-center text-[11px] font-extrabold mt-0.5">Fichar</span>
+            <span className={`block text-center text-[11px] font-extrabold mt-0.5 ${ficharActive ? 'text-ambar' : 'text-white/70'}`}>Fichar</span>
           </NavLink>
         </div>
 

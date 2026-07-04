@@ -1,11 +1,13 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Paleta "pie de obra" */
-  --color-hormigon: #f3f4f2;      /* fondo */
-  --color-grafito: #16274d;       /* tinta principal (azul marino) */
-  --color-humo: #5c635e;          /* tinta secundaria */
-  --color-linea: #e2e4e0;         /* bordes */
+  /* Paleta "pie de obra" en azul marino */
+  --color-hormigon: #eef1f7;      /* fondo (tinte azulado) */
+  --color-grafito: #16274d;       /* azul marino principal */
+  --color-marino-2: #1e3a6e;      /* marino medio (gradientes) */
+  --color-humo: #5a6478;          /* tinta secundaria */
+  --color-linea: #dfe4ee;         /* bordes */
+  --color-columna: #e4e9f2;       /* fondo de columnas del tablero */
   --color-ambar: #f5b301;         /* acento señalización */
   --color-ambar-oscuro: #b98600;
   --color-casco: #1f7a5c;         /* verde OK / trabajando */
@@ -16,7 +18,10 @@
 
   --font-sans: 'Archivo Variable', system-ui, -apple-system, sans-serif;
 
-  --radius-tarjeta: 16px;
+  --radius-tarjeta: 18px;
+
+  --shadow-tarjeta: 0 1px 2px rgb(22 39 77 / 0.06), 0 6px 20px rgb(22 39 77 / 0.07);
+  --shadow-flotante: 0 10px 32px rgb(22 39 77 / 0.22);
 }
 
 html { background: var(--color-hormigon); }
@@ -25,6 +30,11 @@ body {
   font-family: var(--font-sans);
   color: var(--color-grafito);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Cabecera marina con degradado */
+.cabecera {
+  background: linear-gradient(150deg, #122142 0%, #16274d 45%, #22407c 100%);
 }
 
 /* Franjas de señalización (elemento firma, usar con moderación) */
@@ -38,13 +48,34 @@ body {
 
 /* Pulsador industrial de fichaje */
 .pulsador {
-  box-shadow: 0 6px 0 0 rgb(0 0 0 / 0.18), 0 10px 24px rgb(0 0 0 / 0.15);
+  box-shadow: 0 6px 0 0 rgb(0 0 0 / 0.22), 0 10px 24px rgb(0 0 0 / 0.2);
   transition: transform 80ms ease, box-shadow 80ms ease;
 }
 .pulsador:active {
   transform: translateY(4px);
-  box-shadow: 0 2px 0 0 rgb(0 0 0 / 0.18), 0 4px 10px rgb(0 0 0 / 0.12);
+  box-shadow: 0 2px 0 0 rgb(0 0 0 / 0.22), 0 4px 10px rgb(0 0 0 / 0.15);
 }
+
+/* Animaciones suaves */
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes subir-hoja {
+  from { opacity: 0.4; transform: translateY(48px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fundido {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.anim-aparecer { animation: aparecer 0.28s ease both; }
+.anim-hoja { animation: subir-hoja 0.3s cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+.anim-fundido { animation: fundido 0.2s ease both; }
+
+/* Ocultar barra de scroll en carruseles horizontales */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
